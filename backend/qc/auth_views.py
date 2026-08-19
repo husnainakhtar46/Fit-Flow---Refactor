@@ -71,10 +71,11 @@ class ResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
             
-        # Update user's password
-        user = otp_record.user
-        user.set_password(new_password)
-        user.save()
+        # Update password for all user accounts matching this verified email
+        matching_users = User.objects.filter(email__iexact=email)
+        for u in matching_users:
+            u.set_password(new_password)
+            u.save()
         
         # Mark OTP as used
         otp_record.is_used = True
