@@ -26,6 +26,7 @@ class FinalInspectionMeasurementSampleSerializer(serializers.ModelSerializer):
 class FinalInspectionMeasurementSerializer(serializers.ModelSerializer):
     samples = FinalInspectionMeasurementSampleSerializer(many=True, required=False, default=list)
     tol = serializers.FloatField(required=False, default=0.0)
+    spec = serializers.FloatField(required=False, default=0.0)
     pom_name = serializers.CharField(required=False, allow_blank=True, default="")
 
     class Meta:
@@ -36,7 +37,11 @@ class FinalInspectionMeasurementSerializer(serializers.ModelSerializer):
         mutable_data = data.copy() if hasattr(data, 'copy') else dict(data)
         if not mutable_data.get('pom_name'):
             mutable_data['pom_name'] = 'Unspecified'
-        if mutable_data.get('tol') == '' or mutable_data.get('tol') == 'null':
+        if 'std' in mutable_data and ('spec' not in mutable_data or mutable_data.get('spec') is None or mutable_data.get('spec') == ''):
+            mutable_data['spec'] = mutable_data.pop('std')
+        if mutable_data.get('spec') == '' or mutable_data.get('spec') == 'null' or mutable_data.get('spec') is None:
+            mutable_data['spec'] = 0.0
+        if mutable_data.get('tol') == '' or mutable_data.get('tol') == 'null' or mutable_data.get('tol') is None:
             mutable_data['tol'] = 0.0
         return super().to_internal_value(mutable_data)
 
@@ -51,7 +56,10 @@ class FinalInspectionDefectSerializer(serializers.ModelSerializer):
         if 'type' in mutable_data and not mutable_data.get('severity'):
             mutable_data['severity'] = mutable_data.pop('type')
         if not mutable_data.get('severity'):
-            mutable_data['severity'] = 'major'
+            mutable_data['severity'] = 'Major'
+        else:
+            sev = str(mutable_data['severity']).strip().capitalize()
+            mutable_data['severity'] = sev if sev in ['Critical', 'Major', 'Minor'] else 'Major'
         return super().to_internal_value(mutable_data)
 
 

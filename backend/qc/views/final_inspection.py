@@ -147,3 +147,78 @@ class FinalInspectionViewSet(viewsets.ModelViewSet):
         buffer = generate_final_inspection_pdf(final_inspection)
         filename = f"FIR_{final_inspection.order_no}_{final_inspection.style_no}.pdf"
         return FileResponse(buffer, filename=filename, content_type='application/pdf')
+
+    @action(detail=True, methods=['post'])
+    def send_email(self, request, pk=None):
+        from django.core.mail import EmailMessage
+        from django.conf import settings
+
+        final_inspection = self.get_object()
+
+        if final_inspection.customer:
+            to_emails = list(final_inspection.customer.emails.filter(email_type='to').values_list('email', flat=True))
+            cc_emails = list(final_inspection.customer.emails.filter(email_type='cc').values_list('email', flat=True))
+        else:
+            to_emails = []
+            cc_emails = []
+
+        if not to_emails:
+            return Response(
+                {"error": "No 'To' recipients found. Add at least one 'To' email to the Customer first."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if final_inspection.is_draft:
+            return Response(
+                {"error": "Cannot send email for a draft inspection. Please finalize it first."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        date_str = (
+            final_inspection.inspection_date.strftime('%Y-%m-%d')
+            if final_inspection.inspection_date
+            else final_inspection.created_at.strftime('%Y-%m-%d')
+        )
+        subject = f"FIR: {final_inspection.customer.name if final_inspection.customer else 'N/A'} - Order: {final_inspection.order_no} - Style: {final_inspection.style_no} - {date_str} - Result: {final_inspection.result}"
+
+        body = (
+            f"Dear Team,\n\n"
+            f"Please find attached the Final Inspection Report (FIR) against the titled order.\n\n"
+            f"Order No: {final_inspection.order_no}\n"
+            f"Style No: {final_inspection.style_no}\n"
+            f"Color: {final_inspection.color or 'N/A'}\n"
+            f"Total Order Qty: {final_inspection.total_order_qty}\n"
+            f"Sample Size: {final_inspection.sample_size} pcs\n"
+            f"Result: {final_inspection.result}\n\n"
+            f"Thank you."
+        )
+
+        buffer = generate_final_inspection_pdf(final_inspection)
+        filename = f"FIR_{final_inspection.order_no}_{final_inspection.style_no}.pdf"
+
+        try:
+            from qc.gmail_service import send_gmail_message
+            attachments = [(filename, buffer.getvalue(), "application/pdf")]
+            send_gmail_message(
+                to_emails=to_emails,
+                subject=subject,
+                body=body,
+                attachments=attachments,
+                cc_emails=cc_emails if cc_emails else None
+            )
+            return Response({"sent": True, "to": to_emails, "cc": cc_emails, "method": "gmail_api"})
+        except Exception as gmail_error:
+            try:
+                email = EmailMessage(
+                    subject,
+                    body,
+                    settings.EMAIL_HOST_USER,
+                    to_emails,
+                    cc=cc_emails if cc_emails else None
+                )
+                email.attach(filename, buffer.getvalue(), "application/pdf")
+                email.send(fail_silently=False)
+                return Response({"sent": True, "to": to_emails, "cc": cc_emails, "method": "smtp"})
+            except Exception as smtp_error:
+                error_msg = f"Gmail API: {str(gmail_error)} | SMTP: {str(smtp_error)}"
+                return Response({"error": f"Email failed: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

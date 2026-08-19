@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Camera, X, ChevronLeft, ChevronRight, ZoomIn, Trash2, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Camera, X, ZoomIn, Loader2 } from 'lucide-react';
 import { formatDate } from '@/utils/dateFormatter';
 import { SampleImage } from './types';
+import { ImageLightboxModal, LightboxItem } from './ImageLightboxModal';
 
 export interface CommentImage {
   id: string;
@@ -46,14 +46,6 @@ export const CommentImageTiles: React.FC<CommentImageTilesProps> = ({
   const handleDelete = onRemoveExisting || onDeleteImage;
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const lightboxRef = useRef<HTMLDivElement>(null);
-
-  // Auto-focus lightbox when it opens so keyboard navigation works immediately
-  useEffect(() => {
-    if (lightboxIndex !== null && lightboxRef.current) {
-      lightboxRef.current.focus();
-    }
-  }, [lightboxIndex]);
 
   // Clipboard paste handler (Ctrl+V)
   const handlePaste = useCallback(
@@ -89,7 +81,6 @@ export const CommentImageTiles: React.FC<CommentImageTilesProps> = ({
     if (!isEditable || !onFilesSelected) return;
 
     const handleGlobalPaste = (e: ClipboardEvent) => {
-      // Don't capture paste if user is typing in an input or textarea
       const target = e.target as HTMLElement;
       if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') {
         return;
@@ -124,14 +115,7 @@ export const CommentImageTiles: React.FC<CommentImageTilesProps> = ({
   }, [isEditable, onFilesSelected]);
 
   // Merge existing images + pending previews into one display list
-  const allItems: {
-    type: 'existing' | 'pending';
-    src: string;
-    id?: string;
-    caption?: string;
-    pendingIndex?: number;
-    uploadedAt?: string;
-  }[] = [
+  const allItems: LightboxItem[] = [
     ...images.map((img) => ({
       type: 'existing' as const,
       src: img.image,
@@ -177,14 +161,23 @@ export const CommentImageTiles: React.FC<CommentImageTilesProps> = ({
     }
   };
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Escape') closeLightbox();
-      if (e.key === 'ArrowLeft') lightboxPrev();
-      if (e.key === 'ArrowRight') lightboxNext();
-    },
-    [lightboxIndex, totalCount]
-  );
+  const handleLightboxDelete = (item: LightboxItem) => {
+    if (item.type === 'existing' && item.id && handleDelete) {
+      if (confirm('Delete this image?')) {
+        handleDelete(item.id);
+      }
+    } else if (item.type === 'pending' && item.pendingIndex !== undefined && onRemovePending) {
+      onRemovePending(item.pendingIndex);
+    }
+
+    if (lightboxIndex !== null) {
+      if (lightboxIndex >= totalCount - 1 && lightboxIndex > 0) {
+        setLightboxIndex(lightboxIndex - 1);
+      } else if (totalCount <= 1) {
+        closeLightbox();
+      }
+    }
+  };
 
   if (totalCount === 0 && !isEditable) return null;
 
@@ -307,107 +300,18 @@ export const CommentImageTiles: React.FC<CommentImageTilesProps> = ({
         />
       </div>
 
-      {/* Fullscreen Lightbox */}
-      {lightboxIndex !== null && allItems[lightboxIndex] && (
-        <div
-          ref={lightboxRef}
-          className="fixed inset-0 z-[120] bg-black/95 flex items-center justify-center outline-none"
-          onClick={closeLightbox}
-          onKeyDown={handleKeyDown}
-          tabIndex={0}
-        >
-          {/* Close */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="absolute top-4 right-4 text-white hover:bg-white/20 z-10 h-10 w-10 p-0"
-            onClick={closeLightbox}
-          >
-            <X className="w-6 h-6" />
-          </Button>
-
-          {/* Counter */}
-          <div className="absolute top-4 left-4 text-white/80 text-sm font-medium z-10 bg-black/40 px-3 py-1 rounded-full">
-            {lightboxIndex + 1} / {totalCount}
-          </div>
-
-          {/* Previous Button */}
-          {lightboxIndex > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-10 h-12 w-12 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                lightboxPrev();
-              }}
-            >
-              <ChevronLeft className="w-8 h-8" />
-            </Button>
-          )}
-
-          {/* Image Container */}
-          <div
-            className="relative flex flex-col items-center justify-center p-4 max-w-[90vw] max-h-[90vh]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={allItems[lightboxIndex].src}
-              alt={allItems[lightboxIndex].caption || `Image ${lightboxIndex + 1}`}
-              className="max-w-[85vw] max-h-[80vh] object-contain rounded-lg shadow-2xl"
-            />
-
-            {allItems[lightboxIndex].caption && (
-              <p className="text-white/90 text-sm mt-3 font-medium text-center bg-black/60 px-4 py-1.5 rounded-full">
-                {allItems[lightboxIndex].caption}
-              </p>
-            )}
-          </div>
-
-          {/* Next Button */}
-          {lightboxIndex < totalCount - 1 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 z-10 h-12 w-12 p-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                lightboxNext();
-              }}
-            >
-              <ChevronRight className="w-8 h-8" />
-            </Button>
-          )}
-
-          {/* Delete from lightbox (edit mode) */}
-          {isEditable && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute bottom-4 right-4 text-red-400 hover:bg-red-500/20 hover:text-red-300 z-10 gap-1"
-              onClick={(e) => {
-                e.stopPropagation();
-                const item = allItems[lightboxIndex];
-                if (item.type === 'existing' && item.id && handleDelete) {
-                  if (confirm('Delete this image?')) {
-                    handleDelete(item.id);
-                  }
-                } else if (item.type === 'pending' && item.pendingIndex !== undefined && onRemovePending) {
-                  onRemovePending(item.pendingIndex);
-                }
-                if (lightboxIndex >= totalCount - 1 && lightboxIndex > 0) {
-                  setLightboxIndex(lightboxIndex - 1);
-                } else if (totalCount <= 1) {
-                  closeLightbox();
-                }
-              }}
-            >
-              <Trash2 className="w-4 h-4 mr-1" /> Delete Image
-            </Button>
-          )}
-        </div>
-      )}
+      {/* Fullscreen Lightbox Modal */}
+      <ImageLightboxModal
+        isOpen={lightboxIndex !== null}
+        activeIndex={lightboxIndex}
+        items={allItems}
+        totalCount={totalCount}
+        isEditable={isEditable}
+        onClose={closeLightbox}
+        onPrev={lightboxPrev}
+        onNext={lightboxNext}
+        onDelete={handleLightboxDelete}
+      />
     </div>
   );
 };

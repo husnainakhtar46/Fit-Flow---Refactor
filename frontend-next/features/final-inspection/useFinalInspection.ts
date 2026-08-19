@@ -4,10 +4,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { saveAs } from 'file-saver';
-import { pdf } from '@react-pdf/renderer';
 import api from '@/lib/api';
-import { db, cacheCustomers, cacheFactories, cacheTemplates, getCachedCustomers, getCachedFactories, getCachedTemplates } from '@/lib/db';
+import { downloadReportPdf, saveOfflinePdf } from '@/lib/pdfDownloader';
+import { db } from '@/lib/db';
+import { useMasterData } from '@/hooks/useMasterData';
 import { compressImage } from '@/lib/imageUtils';
 import { calculateSampleSize, calculateDefectLimits, calculateVerdict } from '@/lib/aqlCalculations';
 import { PDFReport } from '@/components/pdf/PDFReport';
@@ -88,47 +88,7 @@ export function useFinalInspection() {
     setValue('max_minor_allowed', aqlCalculations.limits.minor.maxAllowed);
   }, [aqlCalculations, setValue]);
 
-  const { data: factoriesData } = useQuery({
-    queryKey: ['factories'],
-    queryFn: async () => {
-      try {
-        const res = await api.get('/factories/');
-        const data = res.data.results || res.data || [];
-        await cacheFactories(data);
-        return data;
-      } catch {
-        return (await getCachedFactories()) || [];
-      }
-    },
-  });
-
-  const { data: customersData } = useQuery({
-    queryKey: ['customers'],
-    queryFn: async () => {
-      try {
-        const res = await api.get('/customers/');
-        const data = res.data.results || res.data || [];
-        await cacheCustomers(data);
-        return data;
-      } catch {
-        return (await getCachedCustomers()) || [];
-      }
-    },
-  });
-
-  const { data: templatesData } = useQuery({
-    queryKey: ['templates'],
-    queryFn: async () => {
-      try {
-        const res = await api.get('/templates/');
-        const data = res.data.results || res.data || [];
-        await cacheTemplates(data);
-        return data;
-      } catch {
-        return (await getCachedTemplates()) || [];
-      }
-    },
-  });
+  const { factories, customers, templates } = useMasterData();
 
   const { data: inspectionsData, isLoading: isInspectionsLoading } = useQuery({
     queryKey: ['final-inspections', page, filters],
@@ -249,20 +209,13 @@ export function useFinalInspection() {
         });
 
         // Client-side offline PDF generation
-        try {
-          const blob = await pdf(
-            React.createElement(PDFReport, {
-              data: payload,
-              defects: defects,
-              images: allImgPayload,
-            }) as any
-          ).toBlob();
-          saveAs(blob, `Offline_FIR_${data.style || data.style_no || 'Report'}_${data.po_number || data.order_no || 'Draft'}.pdf`);
-          toast.success('Saved Offline! PDF report generated.');
-        } catch (pdfErr) {
-          console.warn('Offline PDF generation skipped:', pdfErr);
-          toast.success('Saved locally! Will sync when online.');
-        }
+        const fiDoc = React.createElement(PDFReport, {
+          data: payload,
+          defects: defects,
+          images: allImgPayload,
+        }) as any;
+        const fiFilename = `Offline_FIR_${data.style || data.style_no || 'Report'}_${data.po_number || data.order_no || 'Draft'}.pdf`;
+        await saveOfflinePdf(fiDoc, fiFilename);
 
         clearDraft();
         setIsOpen(false);
@@ -299,27 +252,12 @@ export function useFinalInspection() {
   };
 
   const handleDownloadPdf = async (id: string, style: string) => {
-    const toastId = toast.loading('Generating PDF...');
-    try {
-      const response = await api.get(`/final-inspections/${id}/pdf/`, {
-        responseType: 'blob',
-        timeout: 30000,
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${style || 'Final_Inspection'}_Report.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.dismiss(toastId);
-      toast.success('PDF Downloaded');
-    } catch (serverError: any) {
-      console.warn('Backend PDF failed, generating locally:', serverError);
-      toast.message('Backend unavailable. Generating locally...', { id: toastId });
-
-      try {
+    await downloadReportPdf({
+      endpoint: '/final-inspections/',
+      id,
+      filename: `${style || 'Final_Inspection'}_Report.pdf`,
+      fallbackDocument: React.createElement(PDFReport, { data: {}, defects: [], images: [] }),
+      fallbackDataGetter: async () => {
         let fullData: any = null;
         try {
           const res = await api.get(`/final-inspections/${id}/`);
@@ -328,26 +266,14 @@ export function useFinalInspection() {
           const list = Array.isArray(inspectionsData) ? inspectionsData : (inspectionsData as any)?.results || [];
           fullData = list.find((item: any) => item.id === id);
         }
-
         if (!fullData) throw new Error('No final inspection data found for PDF');
-
-        const blob = await pdf(
-          React.createElement(PDFReport, {
-            data: fullData,
-            defects: fullData.defects_data || fullData.defects || [],
-            images: fullData.images || [],
-          }) as any
-        ).toBlob();
-
-        saveAs(blob, `${style || fullData.style || 'Final_Inspection'}_Report.pdf`);
-        toast.dismiss(toastId);
-        toast.success('PDF Downloaded (Client-Side Mode)');
-      } catch (clientError) {
-        console.error('Client-side PDF generation failed:', clientError);
-        toast.dismiss(toastId);
-        toast.error('PDF generation failed.');
-      }
-    }
+        return React.createElement(PDFReport, {
+          data: fullData,
+          defects: fullData.defects_data || fullData.defects || [],
+          images: fullData.images || [],
+        });
+      },
+    });
   };
 
   return {
@@ -371,9 +297,9 @@ export function useFinalInspection() {
     setDefectImages,
     filters,
     setFilters,
-    factories: Array.isArray(factoriesData) ? factoriesData : factoriesData?.results || [],
-    customers: Array.isArray(customersData) ? customersData : customersData?.results || [],
-    templates: Array.isArray(templatesData) ? templatesData : templatesData?.results || [],
+    factories,
+    customers,
+    templates,
     inspectionsData,
     isInspectionsLoading,
     aqlCalculations,

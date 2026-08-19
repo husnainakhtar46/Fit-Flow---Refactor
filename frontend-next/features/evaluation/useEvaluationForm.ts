@@ -4,10 +4,10 @@ import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { saveAs } from 'file-saver';
-import { pdf } from '@react-pdf/renderer';
 import api from '@/lib/api';
-import { db, cacheCustomers, cacheTemplates, cacheFactories, getCachedCustomers, getCachedTemplates, getCachedFactories } from '@/lib/db';
+import { downloadReportPdf, saveOfflinePdf } from '@/lib/pdfDownloader';
+import { db } from '@/lib/db';
+import { useMasterData } from '@/hooks/useMasterData';
 import { compressImage } from '@/lib/imageUtils';
 import { EvaluationPDFReport } from '@/components/pdf/EvaluationPDFReport';
 import { ImageSlot, AccessoryItem, INITIAL_FORM_STATE } from './types';
@@ -60,47 +60,7 @@ export function useEvaluationForm() {
     setEditingId,
   });
 
-  const { data: factoriesData } = useQuery({
-    queryKey: ['factories'],
-    queryFn: async () => {
-      try {
-        const res = await api.get('/factories/');
-        const data = res.data.results || res.data || [];
-        await cacheFactories(data);
-        return data;
-      } catch {
-        return (await getCachedFactories()) || [];
-      }
-    },
-  });
-
-  const { data: customersData } = useQuery({
-    queryKey: ['customers'],
-    queryFn: async () => {
-      try {
-        const res = await api.get('/customers/');
-        const data = res.data.results || res.data || [];
-        await cacheCustomers(data);
-        return data;
-      } catch {
-        return (await getCachedCustomers()) || [];
-      }
-    },
-  });
-
-  const { data: templatesData } = useQuery({
-    queryKey: ['templates'],
-    queryFn: async () => {
-      try {
-        const res = await api.get('/templates/');
-        const data = res.data.results || res.data || [];
-        await cacheTemplates(data);
-        return data;
-      } catch {
-        return (await getCachedTemplates()) || [];
-      }
-    },
-  });
+  const { factories, customers, templates } = useMasterData();
 
   const { data: inspectionData, isLoading: isInspectionsLoading } = useQuery({
     queryKey: ['inspections', page, filters],
@@ -230,33 +190,26 @@ export function useEvaluationForm() {
         });
 
         // Client-side offline PDF generation
-        try {
-          const imagesForPdf = await Promise.all(
-            imageSlots.map(async (slot) => {
-              if (slot.file && typeof slot.file !== 'string') {
-                try {
-                  const base64 = await fileToBase64(slot.file as Blob);
-                  return { file: base64, caption: slot.caption };
-                } catch {
-                  return { file: null, caption: slot.caption };
-                }
+        const imagesForPdf = await Promise.all(
+          imageSlots.map(async (slot) => {
+            if (slot.file && typeof slot.file !== 'string') {
+              try {
+                const base64 = await fileToBase64(slot.file as Blob);
+                return { file: base64, caption: slot.caption };
+              } catch {
+                return { file: null, caption: slot.caption };
               }
-              return { file: typeof slot.file === 'string' ? slot.file : null, caption: slot.caption };
-            })
-          );
+            }
+            return { file: typeof slot.file === 'string' ? slot.file : null, caption: slot.caption };
+          })
+        );
 
-          const blob = await pdf(
-            React.createElement(EvaluationPDFReport, {
-              data: payload,
-              images: imagesForPdf.filter((img) => img.file),
-            }) as any
-          ).toBlob();
-          saveAs(blob, `Offline_Evaluation_${data.style || 'Report'}_${data.po_number || 'Draft'}.pdf`);
-          toast.success('Saved Offline! PDF report generated.');
-        } catch (pdfErr) {
-          console.warn('Offline PDF generation skipped:', pdfErr);
-          toast.success('Saved locally! Will sync when online.');
-        }
+        const evalDoc = React.createElement(EvaluationPDFReport, {
+          data: payload,
+          images: imagesForPdf.filter((img) => img.file),
+        }) as any;
+        const evalFilename = `Offline_Evaluation_${data.style || 'Report'}_${data.po_number || 'Draft'}.pdf`;
+        await saveOfflinePdf(evalDoc, evalFilename);
 
         draftsManager.clearDraft();
         setIsOpen(false);
@@ -301,27 +254,12 @@ export function useEvaluationForm() {
   };
 
   const handleDownloadPdf = async (id: string, style: string) => {
-    const toastId = toast.loading('Generating PDF...');
-    try {
-      const response = await api.get(`/inspections/${id}/pdf/`, {
-        responseType: 'blob',
-        timeout: 30000,
-      });
-      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${style}_Evaluation.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-      toast.dismiss(toastId);
-      toast.success('PDF Downloaded');
-    } catch (serverError: any) {
-      console.warn('Backend PDF failed, generating locally:', serverError);
-      toast.message('Backend unavailable. Generating locally...', { id: toastId });
-
-      try {
+    await downloadReportPdf({
+      endpoint: '/inspections/',
+      id,
+      filename: `${style || 'Inspection'}_Evaluation.pdf`,
+      fallbackDocument: React.createElement(EvaluationPDFReport, { data: {}, images: [] }),
+      fallbackDataGetter: async () => {
         let fullData: any = null;
         try {
           const res = await api.get(`/inspections/${id}/`);
@@ -330,26 +268,13 @@ export function useEvaluationForm() {
           const list = Array.isArray(inspectionData) ? inspectionData : (inspectionData as any)?.results || [];
           fullData = list.find((item: any) => item.id === id);
         }
-
         if (!fullData) throw new Error('No inspection data found for PDF');
-
-        const images = fullData.images || [];
-        const blob = await pdf(
-          React.createElement(EvaluationPDFReport, {
-            data: fullData,
-            images,
-          }) as any
-        ).toBlob();
-
-        saveAs(blob, `${style}_Evaluation.pdf`);
-        toast.dismiss(toastId);
-        toast.success('PDF Downloaded (Client-Side Mode)');
-      } catch (clientError) {
-        console.error('Client PDF generation failed:', clientError);
-        toast.dismiss(toastId);
-        toast.error('PDF generation failed.');
-      }
-    }
+        return React.createElement(EvaluationPDFReport, {
+          data: fullData,
+          images: fullData.images || [],
+        });
+      },
+    });
   };
 
   return {
@@ -367,9 +292,9 @@ export function useEvaluationForm() {
     setImageSlots,
     filters,
     setFilters,
-    factories: Array.isArray(factoriesData) ? factoriesData : factoriesData?.results || [],
-    customers: Array.isArray(customersData) ? customersData : customersData?.results || [],
-    templates: Array.isArray(templatesData) ? templatesData : templatesData?.results || [],
+    factories,
+    customers,
+    templates,
     inspectionData,
     isInspectionsLoading,
     serverDrafts: Array.isArray(serverDrafts) ? serverDrafts : serverDrafts?.results || [],
