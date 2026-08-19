@@ -52,12 +52,13 @@ class InspectionImageSerializer(serializers.ModelSerializer):
 
 
 class InspectionListSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source='customer.name', read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
 
     class Meta:
         model = Inspection
         fields = [
-            "id", "style", "color", "po_number", "stage", "template", "customer",
+            "id", "style", "color", "po_number", "factory", "stage", "template", "customer", "customer_name",
             "remarks", "decision", "created_at", "updated_at", "created_by_username",
             "customer_decision", "customer_feedback_comments", "customer_feedback_date",
             "is_draft"
@@ -65,13 +66,14 @@ class InspectionListSerializer(serializers.ModelSerializer):
 
 
 class InspectionCopySerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source='customer.name', read_only=True)
     measurements = MeasurementSerializer(many=True, read_only=True)
     images = InspectionImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Inspection
         fields = [
-            "id", "style", "color", "po_number", "factory", "stage", "template", "customer",
+            "id", "style", "color", "po_number", "factory", "stage", "template", "customer", "customer_name",
             # Customer Comments by Category
             "customer_remarks", "customer_fit_comments", "customer_workmanship_comments",
             "customer_wash_comments", "customer_fabric_comments", "customer_accessories_comments",
@@ -91,6 +93,7 @@ class InspectionCopySerializer(serializers.ModelSerializer):
 
 
 class InspectionSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source='customer.name', read_only=True)
     measurements = MeasurementSerializer(many=True, required=False, default=list)
     images = InspectionImageSerializer(many=True, read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
@@ -102,7 +105,7 @@ class InspectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Inspection
         fields = [
-            "id", "style", "color", "po_number", "factory", "stage", "template", "customer",
+            "id", "style", "color", "po_number", "factory", "stage", "template", "customer", "customer_name",
             # Customer Comments by Category
             "customer_remarks", "customer_fit_comments", "customer_workmanship_comments",
             "customer_wash_comments", "customer_fabric_comments", "customer_accessories_comments",

@@ -140,21 +140,21 @@ export const FinalInspectionListView: React.FC<FinalInspectionListViewProps> = (
             ) : (
               inspections.map((item: any) => (
                 <TableRow key={item.id} className="hover:bg-gray-50/60">
-                  <TableCell className="font-medium text-gray-900">{item.style}</TableCell>
-                  <TableCell>{item.po_number || '-'}</TableCell>
+                  <TableCell className="font-medium text-gray-900">{item.style || item.style_no || '-'}</TableCell>
+                  <TableCell>{item.po_number || item.order_no || '-'}</TableCell>
                   <TableCell>{item.customer_name || item.customer?.name || '-'}</TableCell>
                   <TableCell>{item.factory || '-'}</TableCell>
                   <TableCell>
                     <span className="px-2 py-0.5 text-xs rounded bg-purple-50 text-purple-700 font-medium">
-                      {item.inspection_type || 'Final'}
+                      {item.inspection_type || item.inspection_attempt || 'Final'}
                     </span>
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    {item.order_quantity ? item.order_quantity.toLocaleString() : '-'}
+                    {(item.order_quantity || item.total_order_qty) ? (item.order_quantity || item.total_order_qty).toLocaleString() : '-'}
                   </TableCell>
-                  <TableCell className="text-center">{getDecisionBadge(item.decision)}</TableCell>
+                  <TableCell className="text-center">{getDecisionBadge(item.decision || item.result)}</TableCell>
                   <TableCell className="text-xs text-gray-500">
-                    {formatDate(item.created_at)}
+                    {formatDate(item.created_at || item.inspection_date)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">

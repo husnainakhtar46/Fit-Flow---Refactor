@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { saveAs } from 'file-saver';
+import { pdf } from '@react-pdf/renderer';
 import api from '@/lib/api';
 import { db, cacheCustomers, cacheFactories, cacheTemplates, getCachedCustomers, getCachedFactories, getCachedTemplates } from '@/lib/db';
 import { compressImage } from '@/lib/imageUtils';
 import { calculateSampleSize, calculateDefectLimits, calculateVerdict } from '@/lib/aqlCalculations';
+import { PDFReport } from '@/components/pdf/PDFReport';
 import { FIDefect, FISizeBreakdown, INITIAL_FI_FORM_STATE } from './types';
 import { useFIDrafts } from './useFIDrafts';
 
@@ -245,10 +247,26 @@ export function useFinalInspection() {
           status: 'pending_sync',
           type: 'final_inspection',
         });
+
+        // Client-side offline PDF generation
+        try {
+          const blob = await pdf(
+            React.createElement(PDFReport, {
+              data: payload,
+              defects: defects,
+              images: allImgPayload,
+            }) as any
+          ).toBlob();
+          saveAs(blob, `Offline_FIR_${data.style || data.style_no || 'Report'}_${data.po_number || data.order_no || 'Draft'}.pdf`);
+          toast.success('Saved Offline! PDF report generated.');
+        } catch (pdfErr) {
+          console.warn('Offline PDF generation skipped:', pdfErr);
+          toast.success('Saved locally! Will sync when online.');
+        }
+
         clearDraft();
         setIsOpen(false);
         reset(INITIAL_FI_FORM_STATE);
-        toast.success('Saved locally! Will sync when online.');
         return;
       } catch {
         toast.error('Failed to save offline.');
@@ -281,11 +299,54 @@ export function useFinalInspection() {
   };
 
   const handleDownloadPdf = async (id: string, style: string) => {
+    const toastId = toast.loading('Generating PDF...');
     try {
-      const response = await api.get(`/final-inspections/${id}/pdf/`, { responseType: 'blob' });
-      saveAs(new Blob([response.data], { type: 'application/pdf' }), `${style}_Final_Inspection_Report.pdf`);
-    } catch {
-      toast.error('Failed to download PDF');
+      const response = await api.get(`/final-inspections/${id}/pdf/`, {
+        responseType: 'blob',
+        timeout: 30000,
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${style || 'Final_Inspection'}_Report.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.dismiss(toastId);
+      toast.success('PDF Downloaded');
+    } catch (serverError: any) {
+      console.warn('Backend PDF failed, generating locally:', serverError);
+      toast.message('Backend unavailable. Generating locally...', { id: toastId });
+
+      try {
+        let fullData: any = null;
+        try {
+          const res = await api.get(`/final-inspections/${id}/`);
+          fullData = res.data;
+        } catch {
+          const list = Array.isArray(inspectionsData) ? inspectionsData : (inspectionsData as any)?.results || [];
+          fullData = list.find((item: any) => item.id === id);
+        }
+
+        if (!fullData) throw new Error('No final inspection data found for PDF');
+
+        const blob = await pdf(
+          React.createElement(PDFReport, {
+            data: fullData,
+            defects: fullData.defects_data || fullData.defects || [],
+            images: fullData.images || [],
+          }) as any
+        ).toBlob();
+
+        saveAs(blob, `${style || fullData.style || 'Final_Inspection'}_Report.pdf`);
+        toast.dismiss(toastId);
+        toast.success('PDF Downloaded (Client-Side Mode)');
+      } catch (clientError) {
+        console.error('Client-side PDF generation failed:', clientError);
+        toast.dismiss(toastId);
+        toast.error('PDF generation failed.');
+      }
     }
   };
 

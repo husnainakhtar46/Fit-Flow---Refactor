@@ -12,6 +12,8 @@ class InspectionFilter(django_filters.FilterSet):
     # Date range filters
     created_at_after = django_filters.DateFilter(field_name='created_at', lookup_expr='gte', label='From Date')
     created_at_before = django_filters.DateFilter(field_name='created_at', lookup_expr='lte', label='To Date')
+    date_from = django_filters.DateFilter(field_name='created_at', lookup_expr='gte', label='From Date')
+    date_to = django_filters.DateFilter(field_name='created_at', lookup_expr='lte', label='To Date')
     
     # Choice filters
     decision = django_filters.MultipleChoiceFilter(

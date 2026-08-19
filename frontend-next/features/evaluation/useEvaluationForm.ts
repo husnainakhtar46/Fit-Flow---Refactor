@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { saveAs } from 'file-saver';
+import { pdf } from '@react-pdf/renderer';
 import api from '@/lib/api';
 import { db, cacheCustomers, cacheTemplates, cacheFactories, getCachedCustomers, getCachedTemplates, getCachedFactories } from '@/lib/db';
 import { compressImage } from '@/lib/imageUtils';
+import { EvaluationPDFReport } from '@/components/pdf/EvaluationPDFReport';
 import { ImageSlot, AccessoryItem, INITIAL_FORM_STATE } from './types';
 import { useEvaluationDrafts } from './useEvaluationDrafts';
 
@@ -201,6 +203,15 @@ export function useEvaluationForm() {
     },
   });
 
+  const fileToBase64 = (file: File | Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleFormSubmit = async (data: any) => {
     const payload = { ...data, is_draft: false, accessories_data: accessories };
     if (!navigator.onLine) {
@@ -217,10 +228,39 @@ export function useEvaluationForm() {
           status: 'pending_sync',
           type: 'evaluation',
         });
+
+        // Client-side offline PDF generation
+        try {
+          const imagesForPdf = await Promise.all(
+            imageSlots.map(async (slot) => {
+              if (slot.file && typeof slot.file !== 'string') {
+                try {
+                  const base64 = await fileToBase64(slot.file as Blob);
+                  return { file: base64, caption: slot.caption };
+                } catch {
+                  return { file: null, caption: slot.caption };
+                }
+              }
+              return { file: typeof slot.file === 'string' ? slot.file : null, caption: slot.caption };
+            })
+          );
+
+          const blob = await pdf(
+            React.createElement(EvaluationPDFReport, {
+              data: payload,
+              images: imagesForPdf.filter((img) => img.file),
+            }) as any
+          ).toBlob();
+          saveAs(blob, `Offline_Evaluation_${data.style || 'Report'}_${data.po_number || 'Draft'}.pdf`);
+          toast.success('Saved Offline! PDF report generated.');
+        } catch (pdfErr) {
+          console.warn('Offline PDF generation skipped:', pdfErr);
+          toast.success('Saved locally! Will sync when online.');
+        }
+
         draftsManager.clearDraft();
         setIsOpen(false);
         reset(INITIAL_FORM_STATE);
-        toast.success('Saved locally! Will sync when online.');
         return;
       } catch {
         toast.error('Failed to save offline.');
@@ -261,11 +301,54 @@ export function useEvaluationForm() {
   };
 
   const handleDownloadPdf = async (id: string, style: string) => {
+    const toastId = toast.loading('Generating PDF...');
     try {
-      const response = await api.get(`/inspections/${id}/pdf/`, { responseType: 'blob' });
-      saveAs(new Blob([response.data], { type: 'application/pdf' }), `${style}_Report.pdf`);
-    } catch {
-      toast.error('Failed to download PDF');
+      const response = await api.get(`/inspections/${id}/pdf/`, {
+        responseType: 'blob',
+        timeout: 30000,
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${style}_Evaluation.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.dismiss(toastId);
+      toast.success('PDF Downloaded');
+    } catch (serverError: any) {
+      console.warn('Backend PDF failed, generating locally:', serverError);
+      toast.message('Backend unavailable. Generating locally...', { id: toastId });
+
+      try {
+        let fullData: any = null;
+        try {
+          const res = await api.get(`/inspections/${id}/`);
+          fullData = res.data;
+        } catch {
+          const list = Array.isArray(inspectionData) ? inspectionData : (inspectionData as any)?.results || [];
+          fullData = list.find((item: any) => item.id === id);
+        }
+
+        if (!fullData) throw new Error('No inspection data found for PDF');
+
+        const images = fullData.images || [];
+        const blob = await pdf(
+          React.createElement(EvaluationPDFReport, {
+            data: fullData,
+            images,
+          }) as any
+        ).toBlob();
+
+        saveAs(blob, `${style}_Evaluation.pdf`);
+        toast.dismiss(toastId);
+        toast.success('PDF Downloaded (Client-Side Mode)');
+      } catch (clientError) {
+        console.error('Client PDF generation failed:', clientError);
+        toast.dismiss(toastId);
+        toast.error('PDF generation failed.');
+      }
     }
   };
 

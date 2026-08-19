@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Camera } from 'lucide-react';
+import { CommentImageTiles } from './CommentImageTiles';
 import { SampleComment, SAMPLE_STAGES } from './types';
 
 interface CommentEditFormProps {
@@ -204,25 +204,16 @@ export const CommentEditForm: React.FC<CommentEditFormProps> = ({
 
           {/* Photo Attachments */}
           <div className="space-y-2">
-            <Label className="text-xs font-semibold text-gray-700">Attach Photos</Label>
-            <label className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 bg-gray-50">
-              <Camera className="w-6 h-6 text-gray-400 mb-1" />
-              <span className="text-xs text-gray-600">Click to attach photo files</span>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => {
-                  if (e.target.files) {
-                    setNewImages([...newImages, ...Array.from(e.target.files)]);
-                  }
-                }}
-                className="hidden"
-              />
-            </label>
+            <Label className="text-xs font-semibold text-gray-700">Attach Photos (Click to browse or press Ctrl+V to paste)</Label>
+            <CommentImageTiles
+              editable={true}
+              pendingFiles={newImages}
+              onFilesSelected={(files) => setNewImages((prev) => [...prev, ...files])}
+              onRemovePending={(idx) => setNewImages((prev) => prev.filter((_, i) => i !== idx))}
+            />
             {newImages.length > 0 && (
               <p className="text-xs text-green-600 font-medium">
-                {newImages.length} new image(s) ready to upload
+                {newImages.length} new image(s) attached and ready to upload
               </p>
             )}
           </div>

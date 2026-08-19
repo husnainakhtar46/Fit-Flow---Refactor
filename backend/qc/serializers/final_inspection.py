@@ -84,6 +84,7 @@ class FinalInspectionListSerializer(serializers.ModelSerializer):
         model = FinalInspection
         fields = [
             'id', 'order_no', 'style_no', 'color', 'inspection_attempt', 'customer', 'customer_name',
+            'factory', 'supplier',
             'inspection_date', 'result', 'total_order_qty', 'sample_size',
             'created_at', 'updated_at', 'created_by_username', 'is_draft'
         ]

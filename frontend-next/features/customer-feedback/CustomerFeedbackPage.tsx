@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Pagination } from '@/components/shared/Pagination';
 import InspectionFilters from '@/features/inspection-filters/InspectionFilters';
 import { formatDate } from '@/utils/dateFormatter';
 
@@ -53,7 +54,7 @@ export const CustomerFeedbackPage = () => {
     ordering: '-created_at',
   });
 
-  const { register, handleSubmit, reset, setValue } = useForm<FeedbackForm>();
+  const { register, handleSubmit, reset, setValue, watch } = useForm<FeedbackForm>();
 
   const { data: inspectionsData, isLoading } = useQuery({
     queryKey: ['inspections-feedback', page, filters],
@@ -248,6 +249,15 @@ export const CustomerFeedbackPage = () => {
             )}
           </TableBody>
         </Table>
+
+        <Pagination
+          page={page}
+          hasNext={!!inspectionsData?.next}
+          hasPrevious={!!inspectionsData?.previous}
+          onPageChange={setPage}
+          isLoading={isLoading}
+          totalCount={inspectionsData?.count}
+        />
       </div>
 
       <Dialog
@@ -257,47 +267,62 @@ export const CustomerFeedbackPage = () => {
           if (!open) setSelectedInspection(null);
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Update Customer Feedback</DialogTitle>
+            <DialogTitle>Customer Feedback: {selectedInspection?.style}</DialogTitle>
+            <p className="text-xs text-gray-500 mt-1">
+              PO: {selectedInspection?.po_number || '-'} | Stage: {selectedInspection?.stage} | QA Decision:{' '}
+              <span className="font-semibold text-gray-700">{selectedInspection?.decision || 'Pending'}</span>
+            </p>
           </DialogHeader>
           <form
             onSubmit={handleSubmit((data) => updateMutation.mutate(data))}
             className="space-y-4 pt-2"
           >
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Customer Decision *</Label>
-              <select
-                {...register('customer_decision')}
-                className="w-full px-3 py-2 border rounded-md text-sm bg-white font-medium"
-                required
-              >
-                <option value="">-- Select Decision --</option>
-                <option value="Accepted">Accepted</option>
-                <option value="Rejected">Rejected</option>
-                <option value="Revision Requested">Revision Requested</option>
-                <option value="Accepted with Comments">Accepted with Comments</option>
-                <option value="Held Internally">Held Internally</option>
-              </select>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-gray-700">Customer Decision *</Label>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { value: 'Accepted', color: 'bg-green-600 text-white border-green-600' },
+                  { value: 'Rejected', color: 'bg-red-600 text-white border-red-600' },
+                  { value: 'Revision Requested', color: 'bg-orange-600 text-white border-orange-600' },
+                  { value: 'Accepted with Comments', color: 'bg-blue-600 text-white border-blue-600' },
+                  { value: 'Held Internally', color: 'bg-gray-700 text-white border-gray-700' },
+                ].map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setValue('customer_decision', item.value, { shouldDirty: true })}
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition-all ${
+                      watch('customer_decision') === item.value
+                        ? item.color
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {item.value}
+                  </button>
+                ))}
+              </div>
+              <input type="hidden" {...register('customer_decision', { required: true })} />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Feedback Comments</Label>
+              <Label className="text-xs font-semibold text-gray-700">Customer Feedback Comments / Notes</Label>
               <Textarea
                 {...register('customer_feedback_comments')}
-                placeholder="Enter customer comments, fit revisions, approval notes..."
+                placeholder="Enter customer comments, fit revisions, reasons for rejection, or approval notes..."
                 rows={4}
                 className="text-xs"
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t">
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={updateMutation.isPending}
+                disabled={updateMutation.isPending || !watch('customer_decision')}
                 className="bg-primary text-white"
               >
                 {updateMutation.isPending ? 'Saving...' : 'Save Feedback'}
