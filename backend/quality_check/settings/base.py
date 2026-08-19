@@ -4,9 +4,10 @@ from datetime import timedelta
 from dotenv import load_dotenv
 import dj_database_url
 
-load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+load_dotenv(BASE_DIR / ".env")
+load_dotenv()
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "django-insecure-fit-flow-local-secret-key-development")
 
@@ -124,3 +125,5 @@ EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv("EMAIL_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", os.getenv("EMAIL_USER", "webmaster@localhost"))
+GMAIL_TOKEN_PATH = os.getenv("GMAIL_TOKEN_PATH", str(BASE_DIR / "gmail-token.json"))

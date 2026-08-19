@@ -5,9 +5,9 @@ from rest_framework.permissions import AllowAny
 from django.contrib.auth import get_user_model
 from qc.models import OTPVerification
 from qc.otp_utils import generate_and_send_otp
-from django.utils import timezone
 
 User = get_user_model()
+
 
 class RequestOTPView(APIView):
     """
@@ -21,14 +21,15 @@ class RequestOTPView(APIView):
         if not email:
             return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Look up the user by email
-        try:
-            user = User.objects.get(email__iexact=email)
-        except User.DoesNotExist:
-            # Rejection message explicitly indicating the email doesn't exist, as per plan
-            return Response({'error': 'No account found with this email address.'}, status=status.HTTP_404_NOT_FOUND)
+        # Look up the user by email using filter().first() to avoid MultipleObjectsReturned
+        user = User.objects.filter(email__iexact=email).first()
+        if not user:
+            return Response(
+                {'error': 'No account found with this email address.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
         
-        # Generate OTP and send email via Gmail API
+        # Generate OTP and send email via Gmail API with SMTP fallback
         success, message = generate_and_send_otp(user)
         
         if success:
@@ -50,29 +51,28 @@ class ResetPasswordView(APIView):
 
         if not all([email, otp_code, new_password]):
             return Response(
-                {'error': 'Email, OTP, and new password are required.'},
+                {'error': 'Email, verification code, and new password are required.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
             
-        try:
-            user = User.objects.get(email__iexact=email)
-        except User.DoesNotExist:
-            return Response({'error': 'Invalid request.'}, status=status.HTTP_400_BAD_REQUEST)
-            
-        # Verify the OTP
-        try:
-            otp_record = OTPVerification.objects.get(
-                user=user, 
-                otp_code=otp_code, 
-                is_used=False
-            )
-        except OTPVerification.DoesNotExist:
-            return Response({'error': 'Invalid or expired OTP.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Verify the OTP across any account with this email
+        otp_record = OTPVerification.objects.filter(
+            user__email__iexact=email, 
+            otp_code=otp_code, 
+            is_used=False
+        ).select_related('user').first()
+
+        if not otp_record:
+            return Response({'error': 'Invalid or expired verification code.'}, status=status.HTTP_400_BAD_REQUEST)
             
         if not otp_record.is_valid():
-            return Response({'error': 'This OTP has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'This verification code has expired. Please request a new one.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
             
         # Update user's password
+        user = otp_record.user
         user.set_password(new_password)
         user.save()
         
