@@ -5,9 +5,21 @@ import { useStyleCycle } from '@/features/style-cycle/useStyleCycle';
 import { StyleListView } from '@/features/style-cycle/StyleListView';
 import { StyleDetailView } from '@/features/style-cycle/StyleDetailView';
 import { CommentEditForm } from '@/features/style-cycle/CommentEditForm';
+import { StyleFormModal } from '@/features/style-cycle/StyleFormModal';
 
 export default function StyleCyclePage() {
   const sc = useStyleCycle();
+
+  const handleStyleSubmit = (data: any) => {
+    if (sc.editingStyle) {
+      sc.updateStyleMutation.mutate({
+        id: sc.editingStyle.id,
+        data,
+      });
+    } else {
+      sc.createStyleMutation.mutate(data);
+    }
+  };
 
   const handleCommentSubmit = async (data: any, newImages: File[]) => {
     try {
@@ -88,10 +100,22 @@ export default function StyleCyclePage() {
           page={sc.page}
           setPage={sc.setPage}
           onSelectStyle={(id) => sc.setSelectedStyleId(id)}
-          onCreateStyle={(data) => sc.createStyleMutation.mutate(data)}
-          isCreating={sc.createStyleMutation.isPending}
+          onNewStyle={() => sc.setIsCreateStyleOpen(true)}
         />
       )}
+
+      {/* Create / Edit Style Modal */}
+      <StyleFormModal
+        isOpen={sc.isCreateStyleOpen || !!sc.editingStyle}
+        onClose={() => {
+          sc.setIsCreateStyleOpen(false);
+          sc.setEditingStyle(null);
+        }}
+        onSubmit={handleStyleSubmit}
+        style={sc.editingStyle}
+        customers={sc.customers}
+        isSubmitting={sc.createStyleMutation.isPending || sc.updateStyleMutation.isPending}
+      />
 
       {/* Comment Edit / Add Modal */}
       {sc.selectedStyleId && (

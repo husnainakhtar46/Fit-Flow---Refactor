@@ -1,13 +1,9 @@
-'use client';
-
-import React, { useState } from 'react';
-import { Plus, Search, Layers, ChevronRight, Filter } from 'lucide-react';
+import React from 'react';
+import { Plus, Search, Layers, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Pagination } from '@/components/shared/Pagination';
-import { StyleMaster, INITIAL_STYLE_STATE } from './types';
+import { StyleMaster } from './types';
 import { useAuth } from '@/lib/auth';
 
 interface StyleListViewProps {
@@ -21,8 +17,7 @@ interface StyleListViewProps {
   page: number;
   setPage: (p: number) => void;
   onSelectStyle: (styleId: string) => void;
-  onCreateStyle: (data: any) => void;
-  isCreating: boolean;
+  onNewStyle: () => void;
 }
 
 export const StyleListView: React.FC<StyleListViewProps> = ({
@@ -36,22 +31,12 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
   page,
   setPage,
   onSelectStyle,
-  onCreateStyle,
-  isCreating,
+  onNewStyle,
 }) => {
   const { canEditStyleCycle, isReadOnly } = useAuth();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState(INITIAL_STYLE_STATE);
 
   const styles: StyleMaster[] = stylesData?.results || (Array.isArray(stylesData) ? stylesData : []);
   const totalCount = stylesData?.count;
-
-  const handleModalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onCreateStyle(formData);
-    setIsModalOpen(false);
-    setFormData(INITIAL_STYLE_STATE);
-  };
 
   return (
     <div className="space-y-6">
@@ -65,7 +50,7 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
         </div>
 
         {!isReadOnly && canEditStyleCycle && (
-          <Button onClick={() => setIsModalOpen(true)} className="bg-primary gap-2">
+          <Button onClick={onNewStyle} className="bg-primary gap-2">
             <Plus className="w-4 h-4" /> New Style
           </Button>
         )}
@@ -151,74 +136,6 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
         onPageChange={setPage}
         totalCount={totalCount}
       />
-
-      {/* Create Style Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add New Style</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleModalSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">PO Number *</Label>
-              <Input
-                value={formData.po_number}
-                onChange={(e) => setFormData({ ...formData, po_number: e.target.value })}
-                placeholder="PO-12345"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Style Name *</Label>
-              <Input
-                value={formData.style_name}
-                onChange={(e) => setFormData({ ...formData, style_name: e.target.value })}
-                placeholder="Style Name / No."
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Color</Label>
-              <Input
-                value={formData.color}
-                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                placeholder="e.g. Navy Blue"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Customer</Label>
-              <select
-                value={formData.customer}
-                onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
-                className="w-full px-3 py-2 border rounded-md text-sm bg-white"
-              >
-                <option value="">Select Customer</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Season</Label>
-              <Input
-                value={formData.season}
-                onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-                placeholder="e.g. SS25 / AW24"
-              />
-            </div>
-            <div className="pt-2 flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isCreating} className="bg-primary text-white">
-                {isCreating ? 'Creating...' : 'Create Style'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
