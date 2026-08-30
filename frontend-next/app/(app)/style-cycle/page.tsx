@@ -70,6 +70,7 @@ export default function StyleCyclePage() {
             onBack={() => sc.setSelectedStyleId(null)}
             onEditStyle={(style) => {
               sc.setEditingStyle(style);
+              sc.setIsStyleFormOpen(true);
             }}
             onDeleteStyle={(styleId) => sc.deleteStyleMutation.mutate(styleId)}
             onAddComment={() => {
@@ -100,15 +101,18 @@ export default function StyleCyclePage() {
           page={sc.page}
           setPage={sc.setPage}
           onSelectStyle={(id) => sc.setSelectedStyleId(id)}
-          onNewStyle={() => sc.setIsCreateStyleOpen(true)}
+          onNewStyle={() => {
+            sc.setEditingStyle(null);
+            sc.setIsStyleFormOpen(true);
+          }}
         />
       )}
 
       {/* Create / Edit Style Modal */}
       <StyleFormModal
-        isOpen={sc.isCreateStyleOpen || !!sc.editingStyle}
+        isOpen={sc.isStyleFormOpen}
         onClose={() => {
-          sc.setIsCreateStyleOpen(false);
+          sc.setIsStyleFormOpen(false);
           sc.setEditingStyle(null);
         }}
         onSubmit={handleStyleSubmit}

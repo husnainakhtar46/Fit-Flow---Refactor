@@ -13,7 +13,7 @@ export function useStyleCycle() {
   const [customerFilter, setCustomerFilter] = useState('');
   const [page, setPage] = useState(1);
 
-  const [isCreateStyleOpen, setIsCreateStyleOpen] = useState(false);
+  const [isStyleFormOpen, setIsStyleFormOpen] = useState(false);
   const [editingStyle, setEditingStyle] = useState<StyleMaster | null>(null);
   const [isCommentFormOpen, setIsCommentFormOpen] = useState(false);
   const [editingComment, setEditingComment] = useState<SampleComment | null>(null);
@@ -80,7 +80,8 @@ export function useStyleCycle() {
     mutationFn: async (data: any) => api.post('/styles/', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['styles'] });
-      setIsCreateStyleOpen(false);
+      setIsStyleFormOpen(false);
+      setEditingStyle(null);
       toast.success('Style created successfully');
     },
     onError: (err: any) => {
@@ -94,6 +95,7 @@ export function useStyleCycle() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['styles'] });
       queryClient.invalidateQueries({ queryKey: ['style-detail', selectedStyleId] });
+      setIsStyleFormOpen(false);
       setEditingStyle(null);
       toast.success('Style updated successfully');
     },
@@ -174,8 +176,8 @@ export function useStyleCycle() {
     setCustomerFilter,
     page,
     setPage,
-    isCreateStyleOpen,
-    setIsCreateStyleOpen,
+    isStyleFormOpen,
+    setIsStyleFormOpen,
     editingStyle,
     setEditingStyle,
     isCommentFormOpen,

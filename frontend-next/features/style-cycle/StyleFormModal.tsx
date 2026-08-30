@@ -28,16 +28,18 @@ export const StyleFormModal: React.FC<StyleFormModalProps> = ({
   const safeCustomers = Array.isArray(customers) ? customers : [];
 
   useEffect(() => {
-    if (style) {
-      setFormData({
-        po_number: style.po_number || '',
-        style_name: style.style_name || '',
-        color: style.color || '',
-        customer: style.customer || '',
-        season: style.season || '',
-      });
-    } else {
-      setFormData(INITIAL_STYLE_STATE);
+    if (isOpen) {
+      if (style) {
+        setFormData({
+          po_number: style.po_number || '',
+          style_name: style.style_name || '',
+          color: style.color || '',
+          customer: style.customer || '',
+          season: style.season || '',
+        });
+      } else {
+        setFormData(INITIAL_STYLE_STATE);
+      }
     }
   }, [style, isOpen]);
 

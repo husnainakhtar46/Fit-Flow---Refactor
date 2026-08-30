@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Plus, Search, Layers, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
