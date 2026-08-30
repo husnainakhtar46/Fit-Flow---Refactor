@@ -67,10 +67,14 @@ export default function StyleCyclePage() {
             style={sc.styleDetail}
             comments={sc.sampleComments}
             isLoading={sc.isCommentsLoading}
+            customers={sc.customers}
+            isSubmittingStyle={sc.updateStyleMutation.isPending}
             onBack={() => sc.setSelectedStyleId(null)}
-            onEditStyle={(style) => {
-              sc.setEditingStyle(style);
-              sc.setIsStyleFormOpen(true);
+            onEditStyle={(data) => {
+              sc.updateStyleMutation.mutate({
+                id: sc.styleDetail.id,
+                data,
+              });
             }}
             onDeleteStyle={(styleId) => sc.deleteStyleMutation.mutate(styleId)}
             onAddComment={() => {

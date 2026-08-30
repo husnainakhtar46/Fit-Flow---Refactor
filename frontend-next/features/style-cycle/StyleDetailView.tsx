@@ -1,10 +1,12 @@
 'use client';
 
-import React from 'react';
-import { ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Plus, Pencil, Trash2, X, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { SampleCommentCard } from './SampleCommentCard';
-import { StyleMaster, SampleComment } from './types';
+import { StyleMaster, SampleComment, INITIAL_STYLE_STATE } from './types';
 import { useAuth } from '@/lib/auth';
 
 interface StyleDetailViewProps {
@@ -12,12 +14,14 @@ interface StyleDetailViewProps {
   comments: SampleComment[];
   isLoading: boolean;
   onBack: () => void;
-  onEditStyle: (style: StyleMaster) => void;
+  onEditStyle: (data: any) => void;
   onDeleteStyle: (styleId: string) => void;
   onAddComment: () => void;
   onEditComment: (comment: SampleComment) => void;
   onDeleteComment: (commentId: string) => void;
   onDeleteImage: (imageId: string) => void;
+  customers: Array<{ id: string; name: string }>;
+  isSubmittingStyle?: boolean;
 }
 
 export const StyleDetailView: React.FC<StyleDetailViewProps> = ({
@@ -31,28 +35,56 @@ export const StyleDetailView: React.FC<StyleDetailViewProps> = ({
   onEditComment,
   onDeleteComment,
   onDeleteImage,
+  customers,
+  isSubmittingStyle = false,
 }) => {
   const { canEditStyleCycle, isReadOnly } = useAuth();
   const canEdit = !isReadOnly && canEditStyleCycle;
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState(INITIAL_STYLE_STATE);
   const safeComments: SampleComment[] = Array.isArray(comments)
     ? comments
-    : (Array.isArray(style?.comments) ? style.comments : []);
+    : Array.isArray(style?.comments) ? style.comments : [];
+  const safeCustomers = Array.isArray(customers) ? customers : [];
+
+  /** Populate form fields whenever we enter edit mode */
+  useEffect(() => {
+    if (isEditing) {
+      setFormData({
+        po_number: style.po_number || '',
+        style_name: style.style_name || '',
+        color: style.color || '',
+        customer: style.customer || '',
+        season: style.season || '',
+      });
+    }
+  }, [isEditing, style]);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    onEditStyle({
+      ...formData,
+      customer: formData.customer || null,
+    });
+    setIsEditing(false);
+  };
 
   return (
     <div className="space-y-6">
-      {/* Top Bar with Back Button and Actions */}
+      {/* Top Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
           <ArrowLeft className="w-4 h-4" /> Back to Styles
         </Button>
 
         <div className="flex items-center gap-2">
-          {canEdit && (
+          {canEdit && !isEditing && (
             <>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onEditStyle(style)}
+                onClick={() => setIsEditing(true)}
                 className="gap-1 text-xs"
               >
                 <Pencil className="w-3.5 h-3.5" /> Edit Style
@@ -71,40 +103,124 @@ export const StyleDetailView: React.FC<StyleDetailViewProps> = ({
               </Button>
             </>
           )}
-          {canEdit && (
+          {canEdit && !isEditing && (
             <Button size="sm" onClick={onAddComment} className="bg-primary gap-1 text-xs">
               <Plus className="w-3.5 h-3.5" /> Add Sample Stage
+            </Button>
+          )}
+          {isEditing && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditing(false)}
+              className="gap-1 text-xs text-gray-500"
+            >
+              <X className="w-3.5 h-3.5" /> Cancel
             </Button>
           )}
         </div>
       </div>
 
-      {/* Style Overview Banner */}
-      <div className="bg-white border rounded-xl p-6 shadow-sm space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">
-              {style.customer_name || 'Generic Customer'}
-            </span>
-            <h1 className="text-2xl font-bold text-gray-900 mt-0.5">{style.style_name}</h1>
-            <p className="text-xs text-gray-500 mt-1">PO Number: {style.po_number || '-'}</p>
+      {/* Style Overview Banner — View or Edit mode */}
+      <div className="bg-white border rounded-xl p-6 shadow-sm">
+        {isEditing ? (
+          <form onSubmit={handleSave} className="space-y-4">
+            <h2 className="text-sm font-bold text-gray-700 mb-3">Edit Style Details</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">PO Number *</Label>
+                <Input
+                  value={formData.po_number}
+                  onChange={(e) => setFormData({ ...formData, po_number: e.target.value })}
+                  placeholder="PO-12345"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Style Name *</Label>
+                <Input
+                  value={formData.style_name}
+                  onChange={(e) => setFormData({ ...formData, style_name: e.target.value })}
+                  placeholder="Style Name / No."
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Color</Label>
+                <Input
+                  value={formData.color}
+                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                  placeholder="e.g. Navy Blue"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Season</Label>
+                <Input
+                  value={formData.season}
+                  onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                  placeholder="e.g. SS25 / AW24"
+                />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-semibold">Customer</Label>
+                <select
+                  value={formData.customer}
+                  onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-md text-sm bg-white"
+                >
+                  <option value="">Select Customer</option>
+                  {safeCustomers.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(false)}
+                disabled={isSubmittingStyle}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={isSubmittingStyle}
+                className="bg-primary text-white gap-1"
+              >
+                <Check className="w-3.5 h-3.5" />
+                {isSubmittingStyle ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">
+                {style.customer_name || 'Generic Customer'}
+              </span>
+              <h1 className="text-2xl font-bold text-gray-900 mt-0.5">{style.style_name}</h1>
+              <p className="text-xs text-gray-500 mt-1">PO Number: {style.po_number || '-'}</p>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:gap-4">
+              <div className="bg-gray-50 px-3 py-2 rounded-lg border text-xs">
+                <span className="text-gray-500 block">Color</span>
+                <span className="font-bold text-gray-800">{style.color || '-'}</span>
+              </div>
+              <div className="bg-gray-50 px-3 py-2 rounded-lg border text-xs">
+                <span className="text-gray-500 block">Season</span>
+                <span className="font-bold text-gray-800">{style.season || '-'}</span>
+              </div>
+              <div className="bg-gray-50 px-3 py-2 rounded-lg border text-xs">
+                <span className="text-gray-500 block">Stages Logged</span>
+                <span className="font-bold text-blue-600">{safeComments.length}</span>
+              </div>
+            </div>
           </div>
-
-          <div className="flex flex-wrap gap-2 sm:gap-4">
-            <div className="bg-gray-50 px-3 py-2 rounded-lg border text-xs">
-              <span className="text-gray-500 block">Color</span>
-              <span className="font-bold text-gray-800">{style.color || '-'}</span>
-            </div>
-            <div className="bg-gray-50 px-3 py-2 rounded-lg border text-xs">
-              <span className="text-gray-500 block">Season</span>
-              <span className="font-bold text-gray-800">{style.season || '-'}</span>
-            </div>
-            <div className="bg-gray-50 px-3 py-2 rounded-lg border text-xs">
-              <span className="text-gray-500 block">Stages Logged</span>
-              <span className="font-bold text-blue-600">{safeComments.length}</span>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Timeline Section */}
