@@ -253,6 +253,34 @@ export function useEvaluationForm() {
     }
   };
 
+  const handleDuplicateInspection = async (inspection: any) => {
+    try {
+      const res = await api.get(`/inspections/${inspection.id}/`);
+      const full = res.data;
+      setEditingId(null);
+      const cleanedMeasurements = (full.measurements || []).map((m: any) => ({
+        pom_name: m.pom_name,
+        tol: m.tol,
+        std: m.std,
+        samples: (m.samples || []).map((s: any) => ({ index: s.index, value: s.value })),
+      }));
+      const { id, created_at, updated_at, created_by, images, ...formData } = full;
+      reset({ ...formData, is_draft: false, measurements: cleanedMeasurements });
+      if (full.accessories_data) setAccessories(full.accessories_data);
+      if (cleanedMeasurements?.[0]?.samples?.length) setSampleCount(cleanedMeasurements[0].samples.length);
+      setImageSlots([
+        { file: null, caption: 'Front View' },
+        { file: null, caption: 'Back View' },
+        { file: null, caption: 'Wash Label' },
+        { file: null, caption: 'Detail View' },
+      ]);
+      setIsOpen(true);
+      toast.success('Evaluation duplicated as new report');
+    } catch {
+      toast.error('Failed to duplicate evaluation');
+    }
+  };
+
   const handleDownloadPdf = async (id: string, style: string) => {
     await downloadReportPdf({
       endpoint: '/inspections/',
@@ -313,6 +341,7 @@ export function useEvaluationForm() {
     isSubmitting: createMutation.isPending || updateMutation.isPending,
     handleFormSubmit,
     handleEditInspection,
+    handleDuplicateInspection,
     handleDownloadPdf,
     deleteMutation,
     emailMutation,

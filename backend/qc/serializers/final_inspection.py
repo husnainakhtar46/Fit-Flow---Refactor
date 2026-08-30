@@ -47,11 +47,25 @@ class FinalInspectionMeasurementSerializer(serializers.ModelSerializer):
 
 
 class FinalInspectionDefectSerializer(serializers.ModelSerializer):
+    photo_url = serializers.SerializerMethodField()
+
     class Meta:
         model = FinalInspectionDefect
-        fields = ['id', 'description', 'severity', 'count', 'photo']
+        fields = ['id', 'description', 'severity', 'count', 'photo', 'photo_url']
+
+    def get_photo_url(self, obj):
+        if not obj.photo:
+            return None
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(obj.photo.url)
+        return obj.photo.url
 
     def to_internal_value(self, data):
+        import base64
+        import uuid
+        from django.core.files.base import ContentFile
+
         mutable_data = data.copy() if hasattr(data, 'copy') else dict(data)
         if 'type' in mutable_data and not mutable_data.get('severity'):
             mutable_data['severity'] = mutable_data.pop('type')
@@ -60,6 +74,22 @@ class FinalInspectionDefectSerializer(serializers.ModelSerializer):
         else:
             sev = str(mutable_data['severity']).strip().capitalize()
             mutable_data['severity'] = sev if sev in ['Critical', 'Major', 'Minor'] else 'Major'
+
+        if 'photo' in mutable_data and isinstance(mutable_data['photo'], str):
+            photo_str = mutable_data['photo']
+            if photo_str.startswith('data:image'):
+                try:
+                    format_part, img_str = photo_str.split(';base64,')
+                    ext = format_part.split('/')[-1].split('+')[0]
+                    if ext == 'jpeg':
+                        ext = 'jpg'
+                    file_name = f"defect_{uuid.uuid4().hex[:8]}.{ext}"
+                    mutable_data['photo'] = ContentFile(base64.b64decode(img_str), name=file_name)
+                except Exception:
+                    mutable_data.pop('photo', None)
+            elif not photo_str or photo_str.startswith('http') or photo_str.startswith('/media/'):
+                mutable_data.pop('photo', None)
+
         return super().to_internal_value(mutable_data)
 
 

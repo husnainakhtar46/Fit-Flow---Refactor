@@ -19,6 +19,7 @@ import { formatDate } from '@/utils/dateFormatter';
 type FactoryForm = {
   name: string;
   address: string;
+  contact_person: string;
 };
 
 export const FactoriesPage = () => {
@@ -29,7 +30,7 @@ export const FactoriesPage = () => {
   const [page, setPage] = useState(1);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FactoryForm>({
-    defaultValues: { name: '', address: '' },
+    defaultValues: { name: '', address: '', contact_person: '' },
   });
 
   const { data: factoriesData, isLoading } = useQuery({
@@ -67,7 +68,7 @@ export const FactoriesPage = () => {
       queryClient.invalidateQueries({ queryKey: ['factories'] });
       setIsOpen(false);
       setEditingFactory(null);
-      reset({ name: '', address: '' });
+      reset({ name: '', address: '', contact_person: '' });
       toast.success('Factory updated');
     },
     onError: (error: any) => {
@@ -85,7 +86,11 @@ export const FactoriesPage = () => {
 
   const handleEdit = (factory: any) => {
     setEditingFactory(factory);
-    reset({ name: factory.name, address: factory.address || '' });
+    reset({
+      name: factory.name,
+      address: factory.address || '',
+      contact_person: factory.contact_person || '',
+    });
     setIsOpen(true);
   };
 
@@ -102,7 +107,7 @@ export const FactoriesPage = () => {
         {!isReadOnly && canEditFactories && (
           <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => { setEditingFactory(null); reset({ name: '', address: '' }); }} className="bg-primary gap-2">
+              <Button onClick={() => { setEditingFactory(null); reset({ name: '', address: '', contact_person: '' }); }} className="bg-primary gap-2">
                 <Plus className="w-4 h-4" /> Add Factory
               </Button>
             </DialogTrigger>
@@ -124,6 +129,11 @@ export const FactoriesPage = () => {
                   <Label className="text-xs font-semibold">Factory Name *</Label>
                   <Input {...register('name', { required: true })} placeholder="e.g. Apex Apparels Unit 1" />
                   {errors.name && <p className="text-xs text-red-600">Factory name is required</p>}
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Contact Person</Label>
+                  <Input {...register('contact_person')} placeholder="e.g. John Doe (Production Mgr)" />
                 </div>
 
                 <div className="space-y-1.5">
@@ -153,6 +163,7 @@ export const FactoriesPage = () => {
           <TableHeader>
             <TableRow className="bg-gray-50">
               <TableHead>Factory Name</TableHead>
+              <TableHead>Contact Person</TableHead>
               <TableHead>Address</TableHead>
               <TableHead>Created Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -161,13 +172,13 @@ export const FactoriesPage = () => {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                   Loading factories...
                 </TableCell>
               </TableRow>
             ) : factories.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={5} className="text-center py-8 text-gray-500">
                   No factories found.
                 </TableCell>
               </TableRow>
@@ -175,6 +186,7 @@ export const FactoriesPage = () => {
               factories.map((factory: any) => (
                 <TableRow key={factory.id} className="hover:bg-gray-50/60">
                   <TableCell className="font-bold text-gray-900">{factory.name}</TableCell>
+                  <TableCell className="text-xs text-gray-700">{factory.contact_person || '-'}</TableCell>
                   <TableCell className="text-xs text-gray-600 max-w-xs truncate">{factory.address || '-'}</TableCell>
                   <TableCell className="text-xs text-gray-500">{formatDate(factory.created_at)}</TableCell>
                   <TableCell className="text-right">

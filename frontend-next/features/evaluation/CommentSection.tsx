@@ -94,6 +94,15 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           <h4 className="font-bold text-sm text-amber-800 uppercase tracking-wide border-b pb-2 border-amber-200">
             Previous Customer Feedback
           </h4>
+          <div className="space-y-1">
+            <Label className="text-xs font-bold text-amber-900">Customer Overall Feedback Summary</Label>
+            <Textarea
+              {...register('customer_remarks')}
+              placeholder="Overall summary of customer instructions, major revisions, or approval conditions..."
+              rows={3}
+              className="text-xs bg-amber-50/70 border-amber-300 focus:border-amber-500 font-medium"
+            />
+          </div>
           {CATEGORIES.map(({ key, label }) => (
             <div key={`cust-${key}`} className="space-y-1">
               <Label className="text-xs font-semibold text-gray-600">{label}</Label>

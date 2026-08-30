@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FIDefect } from './types';
 import AQLResultCard from '@/components/inspection/AQLResultCard';
+import { compressImage, getFullImageUrl } from '@/lib/imageUtils';
 
 interface DefectSectionProps {
   defects: FIDefect[];
@@ -74,6 +75,30 @@ export const DefectSection: React.FC<DefectSectionProps> = ({
 
   const handleRemove = (index: number) => {
     setDefects(defects.filter((_, i) => i !== index));
+  };
+
+  const handleDefectPhotoPick = async (index: number, file: File) => {
+    try {
+      const compressed = await compressImage(file);
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result as string;
+        const updated = [...defects];
+        updated[index] = { ...updated[index], photo: base64 };
+        setDefects(updated);
+      };
+      reader.readAsDataURL(compressed);
+    } catch {
+      const updated = [...defects];
+      updated[index] = { ...updated[index], photo: file };
+      setDefects(updated);
+    }
+  };
+
+  const handleRemoveDefectPhoto = (index: number) => {
+    const updated = [...defects];
+    updated[index] = { ...updated[index], photo: null };
+    setDefects(updated);
   };
 
   const handleAddImage = (file: File) => {
@@ -157,7 +182,8 @@ export const DefectSection: React.FC<DefectSectionProps> = ({
                 <tr>
                   <th className="p-2 text-left font-semibold text-gray-600">Defect Description</th>
                   <th className="p-2 text-center font-semibold text-gray-600 w-28">Severity</th>
-                  <th className="p-2 text-center font-semibold text-gray-600 w-28">Count</th>
+                  <th className="p-2 text-center font-semibold text-gray-600 w-24">Count</th>
+                  <th className="p-2 text-center font-semibold text-gray-600 w-16">Photo</th>
                   <th className="p-2 text-center font-semibold text-gray-600 w-12">Action</th>
                 </tr>
               </thead>
@@ -189,7 +215,7 @@ export const DefectSection: React.FC<DefectSectionProps> = ({
                         >
                           -
                         </Button>
-                        <span className="w-8 font-bold text-gray-800">{d.count}</span>
+                        <span className="w-7 font-bold text-gray-800">{d.count}</span>
                         <Button
                           type="button"
                           variant="outline"
@@ -200,6 +226,40 @@ export const DefectSection: React.FC<DefectSectionProps> = ({
                           +
                         </Button>
                       </div>
+                    </td>
+                    <td className="p-2 text-center">
+                      {d.photo ? (
+                        <div className="relative inline-block group">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={typeof d.photo === 'string' ? getFullImageUrl(d.photo) : URL.createObjectURL(d.photo)}
+                            alt="Defect"
+                            className="w-7 h-7 object-cover rounded border border-gray-300 mx-auto"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDefectPhoto(index)}
+                            className="absolute -top-1 -right-1 bg-red-600 text-white rounded-full w-3.5 h-3.5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove Photo"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="cursor-pointer inline-flex items-center justify-center w-7 h-7 rounded border border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 text-gray-400 hover:text-blue-600 mx-auto">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              if (e.target.files?.[0]) {
+                                handleDefectPhotoPick(index, e.target.files[0]);
+                              }
+                            }}
+                          />
+                          <Camera className="w-3.5 h-3.5" />
+                        </label>
+                      )}
                     </td>
                     <td className="p-2 text-center">
                       <Button

@@ -132,6 +132,26 @@ export const GeneralInfoSection: React.FC<GeneralInfoSectionProps> = ({
           </select>
         </div>
 
+        {/* Supplier / Vendor */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold">Supplier / Vendor</Label>
+          <Input {...register('supplier')} placeholder="e.g. Fabric & Trim Vendor / Exporter" />
+        </div>
+
+        {/* Inspection Attempt */}
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold">Inspection Attempt *</Label>
+          <select
+            {...register('inspection_attempt')}
+            className="w-full px-3 py-2 border rounded-md text-sm bg-white font-medium"
+            required
+          >
+            <option value="1st">1st Inspection</option>
+            <option value="2nd">2nd Inspection (Re-inspection)</option>
+            <option value="3rd">3rd Inspection</option>
+          </select>
+        </div>
+
         {/* Inspection Type */}
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold">Inspection Stage *</Label>

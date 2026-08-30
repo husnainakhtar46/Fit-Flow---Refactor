@@ -240,8 +240,16 @@ export function useFinalInspection() {
       const full = res.data;
       setEditingId(full.id);
       reset(full);
-      if (full.defects_data) setDefects(full.defects_data);
-      if (full.size_breakdowns) setSizeBreakdowns(full.size_breakdowns);
+      const rawDefects = full.defects || full.defects_data || [];
+      setDefects(
+        rawDefects.map((d: any) => ({
+          ...d,
+          photo: d.photo_url || d.photo || null,
+        }))
+      );
+      if (full.size_checks || full.size_breakdowns) {
+        setSizeBreakdowns(full.size_checks || full.size_breakdowns);
+      }
       if (full.measurements?.[0]?.samples?.length) {
         setSampleCount(full.measurements[0].samples.length);
       }

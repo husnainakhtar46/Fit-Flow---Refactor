@@ -30,6 +30,7 @@ export default function EvaluationPage() {
           form.setIsOpen(true);
         }}
         onEdit={form.handleEditInspection}
+        onDuplicate={form.handleDuplicateInspection}
         onOpenDraft={form.draftsManager.handleOpenDraft}
         onDownloadPdf={form.handleDownloadPdf}
         onEmail={(id) => form.emailMutation.mutate(id)}

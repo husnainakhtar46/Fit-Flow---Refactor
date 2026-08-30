@@ -10,62 +10,131 @@ interface FIShipmentRemarksProps {
   register: UseFormRegister<any>;
 }
 
+const ISO_CHECKS = [
+  { name: 'workmanship', label: 'Workmanship & Construction' },
+  { name: 'packing_method', label: 'Packing & Folding Method' },
+  { name: 'marking_label', label: 'Markings, Labels & Barcodes' },
+  { name: 'data_measurement', label: 'Measurement Data Conformity' },
+  { name: 'hand_feel', label: 'Fabric Hand-feel & Odor' },
+];
+
 export const FIShipmentRemarks: React.FC<FIShipmentRemarksProps> = ({ register }) => {
   return (
     <div className="space-y-6">
-      {/* Packaging & Shipment Checks */}
+      {/* Carton Dimensions & Packaging Audit */}
       <div className="p-4 bg-gray-50 rounded-lg border space-y-4">
         <h4 className="font-bold text-sm text-gray-800 uppercase tracking-wide">
-          Packaging & Shipment Integrity Checks
+          Carton Specifications & Weight Audit
         </h4>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Total Cartons Packed</Label>
+            <Label className="text-xs font-semibold">Total Cartons</Label>
             <Input
               type="number"
               min={0}
               {...register('total_cartons')}
-              placeholder="e.g. 200"
+              placeholder="e.g. 250"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Cartons Inspected</Label>
+            <Label className="text-xs font-semibold">Inspected Cartons</Label>
             <Input
               type="number"
               min={0}
-              {...register('cartons_inspected')}
+              {...register('selected_cartons')}
               placeholder="e.g. 20"
             />
           </div>
 
-          <div className="flex flex-col justify-end space-y-2 pt-2">
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700">
-              <input
-                type="checkbox"
-                {...register('packaging_passed')}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              Packaging / Polybag OK
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700">
-              <input
-                type="checkbox"
-                {...register('carton_drop_test_passed')}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              Carton Drop Test Passed
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700">
-              <input
-                type="checkbox"
-                {...register('barcode_check_passed')}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              Barcode Scan Test Passed
-            </label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Length (cm)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              min={0}
+              {...register('carton_length')}
+              placeholder="e.g. 60"
+            />
           </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Width (cm)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              min={0}
+              {...register('carton_width')}
+              placeholder="e.g. 40"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Height (cm)</Label>
+            <Input
+              type="number"
+              step="0.1"
+              min={0}
+              {...register('carton_height')}
+              placeholder="e.g. 30"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Gross Wt (kg)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min={0}
+              {...register('gross_weight')}
+              placeholder="e.g. 15.5"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Net Wt (kg)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              min={0}
+              {...register('net_weight')}
+              placeholder="e.g. 14.2"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ISO 2859-1 Shipment Conformity Checklists */}
+      <div className="p-4 bg-gray-50 rounded-lg border space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
+          <h4 className="font-bold text-sm text-gray-800 uppercase tracking-wide">
+            ISO Shipment Quality Conformity Checklists
+          </h4>
+          <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-800">
+            <input
+              type="checkbox"
+              {...register('quantity_check')}
+              className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            Quantity & Assortment Verified (100% Match)
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+          {ISO_CHECKS.map(({ name, label }) => (
+            <div key={name} className="space-y-1.5 p-2.5 bg-white rounded border">
+              <Label className="text-xs font-semibold text-gray-700 block leading-tight">{label}</Label>
+              <select
+                {...register(name)}
+                className="w-full px-2.5 py-1.5 border rounded text-xs bg-white font-medium"
+              >
+                <option value="Pass">Pass</option>
+                <option value="Fail">Fail</option>
+                <option value="NA">N/A</option>
+              </select>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -109,3 +178,4 @@ export const FIShipmentRemarks: React.FC<FIShipmentRemarksProps> = ({ register }
     </div>
   );
 };
+

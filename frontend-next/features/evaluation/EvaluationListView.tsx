@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plus, FileText, Mail, Pencil, Trash2, Clock, FileEdit } from 'lucide-react';
+import { Plus, FileText, Mail, Pencil, Trash2, Clock, FileEdit, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination } from '@/components/shared/Pagination';
@@ -20,6 +20,7 @@ interface EvaluationListViewProps {
   serverDrafts: any[];
   onNewEvaluation: () => void;
   onEdit: (inspection: any) => void;
+  onDuplicate: (inspection: any) => void;
   onOpenDraft: (draft: any) => void;
   onDownloadPdf: (id: string, style: string) => void;
   onEmail: (id: string) => void;
@@ -36,6 +37,7 @@ export const EvaluationListView: React.FC<EvaluationListViewProps> = ({
   serverDrafts,
   onNewEvaluation,
   onEdit,
+  onDuplicate,
   onOpenDraft,
   onDownloadPdf,
   onEmail,
@@ -200,6 +202,17 @@ export const EvaluationListView: React.FC<EvaluationListViewProps> = ({
                       >
                         <Mail className="w-4 h-4" />
                       </Button>
+                      {!isReadOnly && canCreateInspections && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => onDuplicate(item)}
+                          title="Duplicate Evaluation"
+                          className="h-8 w-8 text-gray-600 hover:text-purple-600"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      )}
                       {!isReadOnly && canEditEvaluation && (
                         <Button
                           size="icon"

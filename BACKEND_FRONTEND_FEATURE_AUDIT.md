@@ -10,14 +10,14 @@ This document provides a complete audit comparing the **Django Backend Serialize
 |---|---|---|---|---|
 | **Style Cycle** | `StyleMasterSerializer.factory`, `factory_name` | Factory selector when creating/editing Style Master and factory filter | ✅ **Integrated** | `StyleFormModal.tsx`, `StyleDetailView.tsx`, `StyleListView.tsx` |
 | **Style Cycle** | `StyleLinkSerializer`, `StyleLinkViewSet`, `StyleMasterSerializer.links` | External Style Links (Tech Packs, 3D CLO viewers, Google Drive, PLM URLs) | ✅ **Integrated** | `StyleLinksCard.tsx`, `StyleDetailView.tsx` |
-| **Final Inspection** | `FinalInspectionSerializer.carton_length/width/height`, `gross/net_weight` | Carton Dimensions (L × W × H) and Gross/Net Weight specifications | ⏳ Pending | `features/final-inspection/FIShipmentRemarks.tsx` |
-| **Final Inspection** | `quantity_check`, `workmanship`, `packing_method`, `marking_label`, `data_measurement`, `hand_feel` | 6 Standard ISO 2859-1 shipment conformity checklist dropdowns (`Pass` / `Fail` / `NA`) | ⏳ Pending | `features/final-inspection/FIShipmentRemarks.tsx` |
-| **Final Inspection** | `FinalInspectionSerializer.inspection_attempt`, `supplier` | Inspection Attempt (`1st`, `2nd`, `3rd (Re-inspection)`) and Supplier/Vendor name | ⏳ Pending | `features/final-inspection/GeneralInfoSection.tsx` |
-| **Final Inspection** | `FinalInspectionDefectSerializer.photo` | Direct per-defect photo evidence upload | ⏳ Pending | `features/final-inspection/DefectSection.tsx` |
-| **Sample Evaluation** | `InspectionSerializer.customer_remarks` | Top-level Customer Feedback Summary box | ⏳ Pending | `features/evaluation/CommentSection.tsx` |
-| **Sample Evaluation** | `InspectionCopySerializer` | 1-Click "Duplicate / Copy as New" inspection action | ⏳ Pending | `features/evaluation/EvaluationListView.tsx` |
-| **Master Data** | `FactorySerializer.contact_person` | Factory contact person name & title in form and registry table | ⏳ Pending | `features/factories/FactoriesPage.tsx` |
-| **Master Data** | `TemplateSerializer.description` | POM Template description / notes input | ⏳ Pending | `features/templates/TemplateForm.tsx` |
+| **Final Inspection** | `FinalInspectionSerializer.carton_length/width/height`, `gross/net_weight` | Carton Dimensions (L × W × H) and Gross/Net Weight specifications | ✅ **Integrated** | `features/final-inspection/FIShipmentRemarks.tsx` |
+| **Final Inspection** | `quantity_check`, `workmanship`, `packing_method`, `marking_label`, `data_measurement`, `hand_feel` | 6 Standard ISO 2859-1 shipment conformity checklist dropdowns (`Pass` / `Fail` / `NA`) | ✅ **Integrated** | `features/final-inspection/FIShipmentRemarks.tsx` |
+| **Final Inspection** | `FinalInspectionSerializer.inspection_attempt`, `supplier` | Inspection Attempt (`1st`, `2nd`, `3rd (Re-inspection)`) and Supplier/Vendor name | ✅ **Integrated** | `features/final-inspection/GeneralInfoSection.tsx` |
+| **Final Inspection** | `FinalInspectionDefectSerializer.photo` | Direct per-defect photo evidence upload | ✅ **Integrated** | `features/final-inspection/DefectSection.tsx` |
+| **Sample Evaluation** | `InspectionSerializer.customer_remarks` | Top-level Customer Feedback Summary box | ✅ **Integrated** | `features/evaluation/CommentSection.tsx` |
+| **Sample Evaluation** | `InspectionCopySerializer` | 1-Click "Duplicate / Copy as New" inspection action | ✅ **Integrated** | `features/evaluation/EvaluationListView.tsx`, `useEvaluationForm.ts` |
+| **Master Data** | `FactorySerializer.contact_person` | Factory contact person name & title in form and registry table | ✅ **Integrated** | `features/factories/FactoriesPage.tsx` |
+| **Master Data** | `TemplateSerializer.description` | POM Template description / notes input | ✅ **Integrated** | `features/templates/TemplateForm.tsx`, `TemplatesPage.tsx` |
 
 ---
 
