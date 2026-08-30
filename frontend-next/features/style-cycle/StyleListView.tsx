@@ -74,7 +74,7 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
           className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white h-10 sm:w-60"
         >
           <option value="">All Customers</option>
-          {customers.map((c) => (
+          {(Array.isArray(customers) ? customers : []).map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>

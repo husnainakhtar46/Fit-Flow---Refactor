@@ -184,7 +184,11 @@ export function useStyleCycle() {
     setEditingComment,
     stylesData,
     isStylesLoading,
-    customers: customersData || [],
+    customers: Array.isArray(customersData)
+      ? customersData
+      : Array.isArray(customersData?.results)
+      ? customersData.results
+      : [],
     styleDetail,
     isDetailLoading,
     sampleComments: sampleComments || [],

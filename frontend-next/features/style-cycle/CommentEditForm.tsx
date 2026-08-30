@@ -84,7 +84,9 @@ export const CommentEditForm: React.FC<CommentEditFormProps> = ({
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-4 border-b">
           <DialogTitle className="text-xl font-bold">
-            {comment ? `Edit ${comment.sample_stage} Feedback` : 'Add Sample Stage Feedback'}
+            {comment
+              ? `Edit ${comment.sample_stage || comment.sample_type || 'Sample'} Feedback`
+              : 'Add Sample Stage Feedback'}
           </DialogTitle>
         </DialogHeader>
 

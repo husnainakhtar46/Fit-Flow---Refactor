@@ -21,10 +21,11 @@ export const StyleFormModal: React.FC<StyleFormModalProps> = ({
   onClose,
   onSubmit,
   style,
-  customers,
+  customers = [],
   isSubmitting,
 }) => {
   const [formData, setFormData] = useState(INITIAL_STYLE_STATE);
+  const safeCustomers = Array.isArray(customers) ? customers : [];
 
   useEffect(() => {
     if (style) {
@@ -89,7 +90,7 @@ export const StyleFormModal: React.FC<StyleFormModalProps> = ({
               className="w-full px-3 py-2 border rounded-md text-sm bg-white"
             >
               <option value="">Select Customer</option>
-              {customers.map((c) => (
+              {safeCustomers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>

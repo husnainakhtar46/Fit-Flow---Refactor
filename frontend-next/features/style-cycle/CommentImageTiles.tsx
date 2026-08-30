@@ -115,17 +115,20 @@ export const CommentImageTiles: React.FC<CommentImageTilesProps> = ({
   }, [isEditable, onFilesSelected]);
 
   // Merge existing images + pending previews into one display list
+  const safeImages = Array.isArray(images) ? images : [];
+  const safePending = Array.isArray(pendingFiles) ? pendingFiles : [];
+
   const allItems: LightboxItem[] = [
-    ...images.map((img) => ({
+    ...safeImages.map((img) => ({
       type: 'existing' as const,
       src: img.image,
       id: img.id,
       caption: img.caption,
       uploadedAt: (img as any).uploaded_at || (img as any).created_at,
     })),
-    ...pendingFiles.map((file, i) => ({
+    ...safePending.map((file, i) => ({
       type: 'pending' as const,
-      src: URL.createObjectURL(file),
+      src: typeof window !== 'undefined' ? URL.createObjectURL(file) : '',
       caption: file.name,
       pendingIndex: i,
     })),
