@@ -8,7 +8,14 @@ Tests cover:
 """
 
 from django.test import TestCase
-from .models import calculate_sample_size, get_aql_limits, FinalInspection, Customer
+from .models import (
+    calculate_sample_size,
+    get_aql_limits,
+    FinalInspection,
+    Customer,
+    StyleMaster,
+    SampleComment,
+)
 from datetime import date
 
 
@@ -234,3 +241,54 @@ class FinalInspectionAutoCalculationTests(TestCase):
         self.assertEqual(inspection.max_allowed_critical, 0)
         self.assertEqual(inspection.max_allowed_major, 3)
         self.assertEqual(inspection.max_allowed_minor, 5)
+
+
+class StyleCycleTests(TestCase):
+    """Test Style Cycle models and serializers."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        self.user = User.objects.create_user(username='testuser', password='password123')
+        self.customer = Customer.objects.create(name="Style Customer")
+        self.style = StyleMaster.objects.create(
+            po_number="PO-9999",
+            style_name="Tenis Jacket",
+            color="Blue",
+            customer=self.customer,
+            created_by=self.user,
+        )
+
+    def test_sample_comment_creation_with_status_and_dates(self):
+        """Test creating SampleComment with status, submission date, and tracking."""
+        comment = SampleComment.objects.create(
+            style=self.style,
+            sample_type="Fit Sample",
+            status="pending",
+            sample_submission_date=date(2026, 8, 30),
+            courier_tracking_number="DHL-12345",
+            comments_fit="Shoulder width looks good",
+            created_by=self.user,
+        )
+        self.assertEqual(comment.status, "pending")
+        self.assertEqual(comment.courier_tracking_number, "DHL-12345")
+        self.assertEqual(str(comment.sample_submission_date), "2026-08-30")
+
+    def test_sample_comment_serializer_stage_mapping(self):
+        """Test SampleCommentSerializer maps sample_stage and handles fields."""
+        from .serializers import SampleCommentSerializer
+        data = {
+            "sample_stage": "Fit Sample",
+            "status": "in_review",
+            "sample_submission_date": "2026-08-30",
+            "courier_tracking_number": "FEDEX-8888",
+            "comments_fit": "Good fit",
+            "comments_workmanship": "Clean stitching",
+        }
+        serializer = SampleCommentSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        comment = serializer.save(style=self.style, created_by=self.user)
+        self.assertEqual(comment.sample_type, "Fit Sample")
+        self.assertEqual(comment.status, "in_review")
+        self.assertEqual(comment.courier_tracking_number, "FEDEX-8888")
+

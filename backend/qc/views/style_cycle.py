@@ -30,7 +30,7 @@ class StyleMasterViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
 
     def get_queryset(self):
-        queryset = StyleMaster.objects.select_related('customer', 'created_by').order_by('-created_at')
+        queryset = StyleMaster.objects.select_related('customer', 'factory', 'created_by').prefetch_related('comments').order_by('-created_at')
         if self.action in ['retrieve', 'update', 'partial_update']:
             queryset = queryset.prefetch_related('comments', 'links')
         customer_id = self.request.query_params.get('customer')

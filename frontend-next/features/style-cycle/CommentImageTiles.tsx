@@ -179,7 +179,7 @@ export const CommentImageTiles: React.FC<CommentImageTilesProps> = ({
     }
   };
 
-  if (totalCount === 0 && !isEditable) return null;
+  if (totalCount === 0 && (!isEditable || !onFilesSelected)) return null;
 
   return (
     <div

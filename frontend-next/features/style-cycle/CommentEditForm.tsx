@@ -25,7 +25,7 @@ export const CommentEditForm: React.FC<CommentEditFormProps> = ({
   onSubmit,
   isSubmitting,
 }) => {
-  const [stage, setStage] = useState('Proto');
+  const [stage, setStage] = useState(SAMPLE_STAGES[0]);
   const [status, setStatus] = useState<'pending' | 'in_review' | 'approved' | 'rejected' | 'revised'>('pending');
   const [submissionDate, setSubmissionDate] = useState('');
   const [trackingNumber, setTrackingNumber] = useState('');
@@ -38,7 +38,7 @@ export const CommentEditForm: React.FC<CommentEditFormProps> = ({
 
   useEffect(() => {
     if (comment) {
-      setStage(comment.sample_stage || 'Proto');
+      setStage(comment.sample_stage || comment.sample_type || SAMPLE_STAGES[0]);
       setStatus(comment.status || 'pending');
       setSubmissionDate(comment.sample_submission_date || '');
       setTrackingNumber(comment.courier_tracking_number || '');
@@ -48,7 +48,7 @@ export const CommentEditForm: React.FC<CommentEditFormProps> = ({
       setCommentsFabric(comment.comments_fabric || '');
       setCommentsAccessories(comment.comments_accessories || '');
     } else {
-      setStage('Proto');
+      setStage(SAMPLE_STAGES[0]);
       setStatus('pending');
       setSubmissionDate(new Date().toISOString().split('T')[0]);
       setTrackingNumber('');

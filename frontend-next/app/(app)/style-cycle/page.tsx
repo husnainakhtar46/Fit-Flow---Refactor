@@ -10,64 +10,72 @@ export default function StyleCyclePage() {
   const sc = useStyleCycle();
 
   const handleCommentSubmit = async (data: any, newImages: File[]) => {
-    if (sc.editingComment) {
-      await sc.updateCommentMutation.mutateAsync({
-        commentId: sc.editingComment.id,
-        data,
-      });
-      for (const img of newImages) {
-        const fd = new FormData();
-        fd.append('image', img);
-        await sc.uploadCommentImageMutation.mutateAsync({
+    try {
+      if (sc.editingComment) {
+        await sc.updateCommentMutation.mutateAsync({
           commentId: sc.editingComment.id,
-          formData: fd,
+          data,
         });
-      }
-    } else if (sc.selectedStyleId) {
-      const res = await sc.createCommentMutation.mutateAsync({
-        styleId: sc.selectedStyleId,
-        data,
-      });
-      if (res?.data?.id) {
         for (const img of newImages) {
           const fd = new FormData();
           fd.append('image', img);
           await sc.uploadCommentImageMutation.mutateAsync({
-            commentId: res.data.id,
+            commentId: sc.editingComment.id,
             formData: fd,
           });
         }
+      } else if (sc.selectedStyleId) {
+        const res = await sc.createCommentMutation.mutateAsync({
+          styleId: sc.selectedStyleId,
+          data,
+        });
+        if (res?.data?.id) {
+          for (const img of newImages) {
+            const fd = new FormData();
+            fd.append('image', img);
+            await sc.uploadCommentImageMutation.mutateAsync({
+              commentId: res.data.id,
+              formData: fd,
+            });
+          }
+        }
       }
+    } catch {
+      // Error is caught and surfaced by mutation onError
     }
   };
 
   return (
     <div>
-      {sc.selectedStyleId && sc.styleDetail ? (
-        <StyleDetailView
-          style={sc.styleDetail}
-          comments={sc.sampleComments}
-          isLoading={sc.isCommentsLoading}
-          onBack={() => sc.setSelectedStyleId(null)}
-          onEditStyle={(style) => {
-            sc.setEditingStyle(style);
-          }}
-          onDeleteStyle={(styleId) => sc.deleteStyleMutation.mutate(styleId)}
-          onAddComment={() => {
-            sc.setEditingComment(null);
-            sc.setIsCommentFormOpen(true);
-          }}
-          onEditComment={(comment) => {
-            sc.setEditingComment(comment);
-            sc.setIsCommentFormOpen(true);
-          }}
-          onDeleteComment={(commentId) => {
-            if (confirm('Delete this stage feedback?')) {
-              sc.deleteCommentMutation.mutate(commentId);
-            }
-          }}
-          onDeleteImage={(imageId) => sc.deleteCommentImageMutation.mutate(imageId)}
-        />
+      {sc.selectedStyleId ? (
+        sc.isDetailLoading || !sc.styleDetail ? (
+          <div className="text-center py-20 text-gray-500">Loading style details...</div>
+        ) : (
+          <StyleDetailView
+            style={sc.styleDetail}
+            comments={sc.sampleComments}
+            isLoading={sc.isCommentsLoading}
+            onBack={() => sc.setSelectedStyleId(null)}
+            onEditStyle={(style) => {
+              sc.setEditingStyle(style);
+            }}
+            onDeleteStyle={(styleId) => sc.deleteStyleMutation.mutate(styleId)}
+            onAddComment={() => {
+              sc.setEditingComment(null);
+              sc.setIsCommentFormOpen(true);
+            }}
+            onEditComment={(comment) => {
+              sc.setEditingComment(comment);
+              sc.setIsCommentFormOpen(true);
+            }}
+            onDeleteComment={(commentId) => {
+              if (confirm('Delete this stage feedback?')) {
+                sc.deleteCommentMutation.mutate(commentId);
+              }
+            }}
+            onDeleteImage={(imageId) => sc.deleteCommentImageMutation.mutate(imageId)}
+          />
+        )
       ) : (
         <StyleListView
           stylesData={sc.stylesData}

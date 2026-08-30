@@ -42,6 +42,7 @@ class SampleComment(models.Model):
         ('Size Set', 'Size Set'),
         ('SMS', 'SMS'),
         ('Shipment Sample', 'Shipment Sample'),
+        ('Proto', 'Proto'),
     ]
 
     SAMPLE_NUMBER_CHOICES = [
@@ -52,10 +53,21 @@ class SampleComment(models.Model):
         (5, '5th Sample'),
     ]
 
+    STATUS_CHOICES = [
+        ('pending', 'Pending Review'),
+        ('in_review', 'In Review'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('revised', 'Revised Required'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     style = models.ForeignKey(StyleMaster, on_delete=models.CASCADE, related_name='comments')
     sample_type = models.CharField(max_length=50, choices=SAMPLE_TYPE_CHOICES)
     sample_number = models.PositiveSmallIntegerField(choices=SAMPLE_NUMBER_CHOICES, default=1)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', blank=True)
+    sample_submission_date = models.DateField(null=True, blank=True, help_text="Date sample was submitted")
+    courier_tracking_number = models.CharField(max_length=255, blank=True, default='', help_text="Courier/Tracking number")
 
     comments_general = models.TextField(blank=True, verbose_name="General Customer Feedback")
     comments_fit = models.TextField(blank=True, verbose_name="Fit Comments")

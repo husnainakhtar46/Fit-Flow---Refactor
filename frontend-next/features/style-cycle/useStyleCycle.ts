@@ -59,6 +59,22 @@ export function useStyleCycle() {
     enabled: !!selectedStyleId,
   });
 
+  const formatApiError = (err: any, fallback: string): string => {
+    if (err?.response?.data) {
+      const data = err.response.data;
+      if (typeof data === 'string') return data;
+      if (data.detail) return data.detail;
+      if (data.error) return data.error;
+      if (typeof data === 'object') {
+        const messages = Object.entries(data)
+          .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+          .join(' | ');
+        if (messages) return messages;
+      }
+    }
+    return err?.message || fallback;
+  };
+
   // Mutations
   const createStyleMutation = useMutation({
     mutationFn: async (data: any) => api.post('/styles/', data),
@@ -68,7 +84,7 @@ export function useStyleCycle() {
       toast.success('Style created successfully');
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.detail || 'Failed to create style');
+      toast.error(formatApiError(err, 'Failed to create style'));
     },
   });
 
@@ -82,7 +98,7 @@ export function useStyleCycle() {
       toast.success('Style updated successfully');
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.detail || 'Failed to update style');
+      toast.error(formatApiError(err, 'Failed to update style'));
     },
   });
 
@@ -105,7 +121,7 @@ export function useStyleCycle() {
       toast.success('Sample stage comment added');
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.detail || 'Failed to add comment');
+      toast.error(formatApiError(err, 'Failed to add comment'));
     },
   });
 
@@ -119,7 +135,7 @@ export function useStyleCycle() {
       toast.success('Comment updated successfully');
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.detail || 'Failed to update comment');
+      toast.error(formatApiError(err, 'Failed to update comment'));
     },
   });
 

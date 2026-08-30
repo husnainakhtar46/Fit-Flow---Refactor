@@ -34,6 +34,9 @@ export const StyleDetailView: React.FC<StyleDetailViewProps> = ({
 }) => {
   const { canEditStyleCycle, isReadOnly } = useAuth();
   const canEdit = !isReadOnly && canEditStyleCycle;
+  const safeComments: SampleComment[] = Array.isArray(comments)
+    ? comments
+    : (Array.isArray(style?.comments) ? style.comments : []);
 
   return (
     <div className="space-y-6">
@@ -98,7 +101,7 @@ export const StyleDetailView: React.FC<StyleDetailViewProps> = ({
             </div>
             <div className="bg-gray-50 px-3 py-2 rounded-lg border text-xs">
               <span className="text-gray-500 block">Stages Logged</span>
-              <span className="font-bold text-blue-600">{comments.length}</span>
+              <span className="font-bold text-blue-600">{safeComments.length}</span>
             </div>
           </div>
         </div>
@@ -113,7 +116,7 @@ export const StyleDetailView: React.FC<StyleDetailViewProps> = ({
 
         {isLoading ? (
           <div className="text-center py-12 text-gray-500">Loading sample stages...</div>
-        ) : comments.length === 0 ? (
+        ) : safeComments.length === 0 ? (
           <div className="bg-white border rounded-lg p-12 text-center space-y-3">
             <p className="text-gray-500 text-sm">No sample feedback logged for this style yet.</p>
             {canEdit && (
@@ -124,7 +127,7 @@ export const StyleDetailView: React.FC<StyleDetailViewProps> = ({
           </div>
         ) : (
           <div className="space-y-4">
-            {comments.map((c) => (
+            {safeComments.map((c) => (
               <SampleCommentCard
                 key={c.id}
                 comment={c}

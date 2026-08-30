@@ -50,6 +50,8 @@ export const SampleCommentCard: React.FC<SampleCommentCardProps> = ({
     ? `${comment.sample_type || comment.sample_stage || 'Sample'} (${comment.sample_number_display})`
     : comment.sample_type || comment.sample_stage || 'Sample Stage';
 
+  const safeImages = Array.isArray(comment.images) ? comment.images : [];
+
   return (
     <div className="bg-white border rounded-lg p-4 space-y-3 shadow-sm hover:shadow-md transition-shadow">
       {/* Header */}
@@ -112,11 +114,13 @@ export const SampleCommentCard: React.FC<SampleCommentCardProps> = ({
       )}
 
       {/* Attached Images */}
-      <CommentImageTiles
-        images={comment.images}
-        onDeleteImage={onDeleteImage}
-        canEdit={canEdit}
-      />
+      {safeImages.length > 0 && (
+        <CommentImageTiles
+          images={safeImages}
+          onDeleteImage={onDeleteImage}
+          canEdit={canEdit}
+        />
+      )}
     </div>
   );
 };

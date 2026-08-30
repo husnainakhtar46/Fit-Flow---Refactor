@@ -31,6 +31,7 @@ class SampleCommentSerializer(serializers.ModelSerializer):
         model = SampleComment
         fields = [
             'id', 'sample_type', 'sample_stage', 'sample_number', 'sample_number_display',
+            'status', 'sample_submission_date', 'courier_tracking_number',
             'comments_general', 'comments_fit', 'comments_workmanship',
             'comments_wash', 'comments_fabric', 'comments_accessories',
             'general_edited_at', 'fit_edited_at', 'workmanship_edited_at',
@@ -52,6 +53,8 @@ class SampleCommentSerializer(serializers.ModelSerializer):
             mutable_data['sample_type'] = 'Fit Sample'
         if not mutable_data.get('sample_number'):
             mutable_data['sample_number'] = 1
+        if mutable_data.get('sample_submission_date') == '':
+            mutable_data['sample_submission_date'] = None
         return super().to_internal_value(mutable_data)
 
 
@@ -60,18 +63,28 @@ class StyleMasterListSerializer(serializers.ModelSerializer):
     factory_name = serializers.CharField(source='factory.name', read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     comments_count = serializers.SerializerMethodField()
+    latest_stage = serializers.SerializerMethodField()
+    latest_status = serializers.SerializerMethodField()
 
     class Meta:
         model = StyleMaster
         fields = [
             'id', 'po_number', 'style_name', 'color', 'season',
             'customer', 'customer_name', 'factory', 'factory_name',
-            'comments_count',
+            'comments_count', 'latest_stage', 'latest_status',
             'created_at', 'created_by_username'
         ]
 
     def get_comments_count(self, obj):
         return obj.comments.count()
+
+    def get_latest_stage(self, obj):
+        latest = obj.comments.order_by('-created_at').first()
+        return latest.sample_type if latest else None
+
+    def get_latest_status(self, obj):
+        latest = obj.comments.order_by('-created_at').first()
+        return latest.status if latest else None
 
 
 class StyleMasterSerializer(serializers.ModelSerializer):

@@ -38,6 +38,8 @@ export type StyleMaster = {
   comments_count?: number;
   latest_stage?: string;
   latest_status?: string;
+  comments?: SampleComment[];
+  links?: { id: string; label: string; url: string; created_at: string }[];
 };
 
 export const INITIAL_STYLE_STATE = {
@@ -49,10 +51,10 @@ export const INITIAL_STYLE_STATE = {
 };
 
 export const SAMPLE_STAGES = [
-  'Proto',
-  'Fit',
-  'SMS',
+  'Fit Sample',
+  'PP Sample',
   'Size Set',
-  'PPS',
+  'SMS',
   'Shipment Sample',
+  'Proto',
 ];
