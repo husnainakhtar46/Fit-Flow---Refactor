@@ -11,6 +11,7 @@ export function useStyleCycle() {
   const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [customerFilter, setCustomerFilter] = useState('');
+  const [factoryFilter, setFactoryFilter] = useState('');
   const [page, setPage] = useState(1);
 
   const [isStyleFormOpen, setIsStyleFormOpen] = useState(false);
@@ -20,12 +21,13 @@ export function useStyleCycle() {
 
   // Queries
   const { data: stylesData, isLoading: isStylesLoading } = useQuery({
-    queryKey: ['styles', page, search, customerFilter],
+    queryKey: ['styles', page, search, customerFilter, factoryFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       params.append('page', page.toString());
       if (search) params.append('search', search);
       if (customerFilter) params.append('customer', customerFilter);
+      if (factoryFilter) params.append('factory', factoryFilter);
       const res = await api.get(`/styles/?${params.toString()}`);
       return res.data;
     },
@@ -35,6 +37,14 @@ export function useStyleCycle() {
     queryKey: ['customers'],
     queryFn: async () => {
       const res = await api.get('/customers/');
+      return Array.isArray(res.data) ? res.data : res.data?.results || [];
+    },
+  });
+
+  const { data: factoriesData } = useQuery({
+    queryKey: ['factories'],
+    queryFn: async () => {
+      const res = await api.get('/factories/');
       return Array.isArray(res.data) ? res.data : res.data?.results || [];
     },
   });
@@ -113,6 +123,29 @@ export function useStyleCycle() {
     },
   });
 
+  const addStyleLinkMutation = useMutation({
+    mutationFn: async ({ styleId, label, url }: { styleId: string; label: string; url: string }) =>
+      api.post(`/styles/${styleId}/add_link/`, { label, url }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['style-detail', selectedStyleId] });
+      toast.success('Resource link added');
+    },
+    onError: (err: any) => {
+      toast.error(formatApiError(err, 'Failed to add link'));
+    },
+  });
+
+  const deleteStyleLinkMutation = useMutation({
+    mutationFn: async (linkId: string) => api.delete(`/style-links/${linkId}/`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['style-detail', selectedStyleId] });
+      toast.success('Link removed');
+    },
+    onError: (err: any) => {
+      toast.error(formatApiError(err, 'Failed to remove link'));
+    },
+  });
+
   const createCommentMutation = useMutation({
     mutationFn: async ({ styleId, data }: { styleId: string; data: any }) =>
       api.post(`/styles/${styleId}/comments/`, data),
@@ -177,6 +210,8 @@ export function useStyleCycle() {
     setSearch,
     customerFilter,
     setCustomerFilter,
+    factoryFilter,
+    setFactoryFilter,
     page,
     setPage,
     isStyleFormOpen,
@@ -194,6 +229,11 @@ export function useStyleCycle() {
       : Array.isArray(customersData?.results)
       ? customersData.results
       : [],
+    factories: Array.isArray(factoriesData)
+      ? factoriesData
+      : Array.isArray(factoriesData?.results)
+      ? factoriesData.results
+      : [],
     styleDetail,
     isDetailLoading,
     sampleComments: sampleComments || [],
@@ -201,6 +241,8 @@ export function useStyleCycle() {
     createStyleMutation,
     updateStyleMutation,
     deleteStyleMutation,
+    addStyleLinkMutation,
+    deleteStyleLinkMutation,
     createCommentMutation,
     updateCommentMutation,
     deleteCommentMutation,

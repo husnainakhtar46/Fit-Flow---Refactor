@@ -292,3 +292,40 @@ class StyleCycleTests(TestCase):
         self.assertEqual(comment.status, "in_review")
         self.assertEqual(comment.courier_tracking_number, "FEDEX-8888")
 
+    def test_sample_number_auto_increment(self):
+        """Test that sample_number increments automatically per sample_type for a style."""
+        c1 = SampleComment.objects.create(
+            style=self.style,
+            sample_type="Proto",
+            created_by=self.user,
+        )
+        self.assertEqual(c1.sample_number, 1)
+        self.assertEqual(c1.get_sample_number_display(), "1st Sample")
+
+        c2 = SampleComment.objects.create(
+            style=self.style,
+            sample_type="Proto",
+            created_by=self.user,
+        )
+        self.assertEqual(c2.sample_number, 2)
+        self.assertEqual(c2.get_sample_number_display(), "2nd Sample")
+
+        # A different sample_type starts from 1
+        c3 = SampleComment.objects.create(
+            style=self.style,
+            sample_type="Fit Sample",
+            created_by=self.user,
+        )
+        self.assertEqual(c3.sample_number, 1)
+        self.assertEqual(c3.get_sample_number_display(), "1st Sample")
+
+        # 3rd Proto increments to 3
+        c4 = SampleComment.objects.create(
+            style=self.style,
+            sample_type="Proto",
+            created_by=self.user,
+        )
+        self.assertEqual(c4.sample_number, 3)
+        self.assertEqual(c4.get_sample_number_display(), "3rd Sample")
+
+

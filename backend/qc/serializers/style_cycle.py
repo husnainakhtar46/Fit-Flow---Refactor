@@ -35,6 +35,7 @@ class SampleCommentSerializer(serializers.ModelSerializer):
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     sample_number_display = serializers.CharField(source='get_sample_number_display', read_only=True)
     sample_stage = serializers.CharField(source='sample_type', required=False, allow_blank=True)
+    sample_number = serializers.IntegerField(required=False)
     images = SampleCommentImageSerializer(many=True, read_only=True)
 
     class Meta:
@@ -61,8 +62,6 @@ class SampleCommentSerializer(serializers.ModelSerializer):
             mutable_data['sample_type'] = mutable_data.pop('sample_stage')
         if not mutable_data.get('sample_type'):
             mutable_data['sample_type'] = 'Fit Sample'
-        if not mutable_data.get('sample_number'):
-            mutable_data['sample_number'] = 1
         if mutable_data.get('sample_submission_date') == '':
             mutable_data['sample_submission_date'] = None
         return super().to_internal_value(mutable_data)

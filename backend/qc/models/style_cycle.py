@@ -101,8 +101,25 @@ class SampleComment(models.Model):
         verbose_name = "Sample Comment"
         verbose_name_plural = "Sample Comments"
 
+    def get_sample_number_display(self):
+        n = self.sample_number or 1
+        if 11 <= (n % 100) <= 13:
+            suffix = 'th'
+        else:
+            suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')
+        return f"{n}{suffix} Sample"
+
     def save(self, *args, **kwargs):
-        if self.pk:
+        is_new = self._state.adding or not self.pk or not SampleComment.objects.filter(pk=self.pk).exists()
+        if is_new and (not self.sample_number or self.sample_number == 1):
+            if self.style_id and self.sample_type:
+                existing_count = SampleComment.objects.filter(
+                    style_id=self.style_id,
+                    sample_type=self.sample_type
+                ).count()
+                self.sample_number = existing_count + 1
+
+        if self.pk and not is_new:
             try:
                 old = SampleComment.objects.filter(pk=self.pk).values(
                     *self.SECTION_TIMESTAMP_MAP.keys()

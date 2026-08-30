@@ -4,7 +4,7 @@ import React from 'react';
 import { Pencil, Trash2, Calendar, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommentImageTiles } from './CommentImageTiles';
-import { SampleComment, COMMENT_CATEGORIES, SampleImage } from './types';
+import { SampleComment, COMMENT_CATEGORIES, SampleImage, getOrdinalSample } from './types';
 import { formatDate } from '@/utils/dateFormatter';
 
 interface SampleCommentCardProps {
@@ -37,9 +37,9 @@ export const SampleCommentCard: React.FC<SampleCommentCardProps> = ({
     }
   };
 
-  const stageDisplay = comment.sample_number_display
-    ? `${comment.sample_type || comment.sample_stage || 'Sample'} (${comment.sample_number_display})`
-    : comment.sample_type || comment.sample_stage || 'Sample Stage';
+  const sampleNum = comment.sample_number || 1;
+  const sampleNumDisplay = comment.sample_number_display || getOrdinalSample(sampleNum);
+  const stageDisplay = `${comment.sample_type || comment.sample_stage || 'Sample'} (${sampleNumDisplay})`;
 
   const safeImages: SampleImage[] = Array.isArray(comment.images) ? comment.images : [];
 

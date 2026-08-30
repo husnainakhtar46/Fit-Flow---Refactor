@@ -12,6 +12,7 @@ import {
   COMMENT_CATEGORIES,
   CommentCategoryKey,
   SampleImage,
+  getOrdinalSample,
 } from './types';
 
 interface CommentEditFormProps {
@@ -136,7 +137,7 @@ export const CommentEditForm: React.FC<CommentEditFormProps> = ({
         <DialogHeader className="p-5 pb-3 border-b bg-gray-50/50">
           <DialogTitle className="text-lg font-bold text-gray-900">
             {comment
-              ? `Edit ${comment.sample_stage || comment.sample_type || 'Sample'} Feedback`
+              ? `Edit ${comment.sample_stage || comment.sample_type || 'Sample'} (${comment.sample_number_display || getOrdinalSample(comment.sample_number)}) Feedback`
               : 'Add Sample Stage Feedback'}
           </DialogTitle>
         </DialogHeader>

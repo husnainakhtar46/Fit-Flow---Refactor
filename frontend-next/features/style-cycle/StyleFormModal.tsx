@@ -13,6 +13,7 @@ interface StyleFormModalProps {
   onSubmit: (data: any) => void;
   style: StyleMaster | null;
   customers: Array<{ id: string; name: string }>;
+  factories?: Array<{ id: string; name: string }>;
   isSubmitting: boolean;
 }
 
@@ -22,10 +23,12 @@ export const StyleFormModal: React.FC<StyleFormModalProps> = ({
   onSubmit,
   style,
   customers = [],
+  factories = [],
   isSubmitting,
 }) => {
   const [formData, setFormData] = useState(INITIAL_STYLE_STATE);
   const safeCustomers = Array.isArray(customers) ? customers : [];
+  const safeFactories = Array.isArray(factories) ? factories : [];
 
   useEffect(() => {
     if (isOpen) {
@@ -35,6 +38,7 @@ export const StyleFormModal: React.FC<StyleFormModalProps> = ({
           style_name: style.style_name || '',
           color: style.color || '',
           customer: style.customer || '',
+          factory: style.factory || '',
           season: style.season || '',
         });
       } else {
@@ -48,6 +52,7 @@ export const StyleFormModal: React.FC<StyleFormModalProps> = ({
     onSubmit({
       ...formData,
       customer: formData.customer ? formData.customer : null,
+      factory: formData.factory ? formData.factory : null,
     });
   };
 
@@ -57,39 +62,56 @@ export const StyleFormModal: React.FC<StyleFormModalProps> = ({
         <DialogHeader>
           <DialogTitle>{style ? 'Edit Style' : 'Add New Style'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          <div className="space-y-1">
             <Label className="text-xs font-semibold">PO Number *</Label>
             <Input
               value={formData.po_number}
               onChange={(e) => setFormData({ ...formData, po_number: e.target.value })}
               placeholder="PO-12345"
               required
+              className="h-9 text-xs"
             />
           </div>
-          <div className="space-y-1.5">
+
+          <div className="space-y-1">
             <Label className="text-xs font-semibold">Style Name *</Label>
             <Input
               value={formData.style_name}
               onChange={(e) => setFormData({ ...formData, style_name: e.target.value })}
               placeholder="Style Name / No."
               required
+              className="h-9 text-xs"
             />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Color</Label>
-            <Input
-              value={formData.color}
-              onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-              placeholder="e.g. Navy Blue"
-            />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Color</Label>
+              <Input
+                value={formData.color}
+                onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                placeholder="e.g. Navy Blue"
+                className="h-9 text-xs"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Season</Label>
+              <Input
+                value={formData.season}
+                onChange={(e) => setFormData({ ...formData, season: e.target.value })}
+                placeholder="e.g. SS25 / AW24"
+                className="h-9 text-xs"
+              />
+            </div>
           </div>
-          <div className="space-y-1.5">
+
+          <div className="space-y-1">
             <Label className="text-xs font-semibold">Customer</Label>
             <select
               value={formData.customer}
               onChange={(e) => setFormData({ ...formData, customer: e.target.value })}
-              className="w-full px-3 py-2 border rounded-md text-sm bg-white"
+              className="w-full px-3 py-2 border rounded-md text-xs bg-white h-9"
             >
               <option value="">Select Customer</option>
               {safeCustomers.map((c) => (
@@ -99,19 +121,28 @@ export const StyleFormModal: React.FC<StyleFormModalProps> = ({
               ))}
             </select>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Season</Label>
-            <Input
-              value={formData.season}
-              onChange={(e) => setFormData({ ...formData, season: e.target.value })}
-              placeholder="e.g. SS25 / AW24"
-            />
+
+          <div className="space-y-1">
+            <Label className="text-xs font-semibold">Manufacturing Factory</Label>
+            <select
+              value={formData.factory}
+              onChange={(e) => setFormData({ ...formData, factory: e.target.value })}
+              className="w-full px-3 py-2 border rounded-md text-xs bg-white h-9"
+            >
+              <option value="">Select Factory (Optional)</option>
+              {safeFactories.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
           </div>
+
           <div className="pt-2 flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+            <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-primary text-white">
+            <Button type="submit" size="sm" disabled={isSubmitting} className="bg-primary text-white">
               {isSubmitting ? 'Saving...' : style ? 'Update Style' : 'Create Style'}
             </Button>
           </div>
@@ -120,3 +151,5 @@ export const StyleFormModal: React.FC<StyleFormModalProps> = ({
     </Dialog>
   );
 };
+
+export default StyleFormModal;

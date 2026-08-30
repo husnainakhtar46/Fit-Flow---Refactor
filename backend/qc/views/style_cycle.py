@@ -36,6 +36,9 @@ class StyleMasterViewSet(viewsets.ModelViewSet):
         customer_id = self.request.query_params.get('customer')
         if customer_id:
             queryset = queryset.filter(customer_id=customer_id)
+        factory_id = self.request.query_params.get('factory')
+        if factory_id:
+            queryset = queryset.filter(factory_id=factory_id)
         return queryset
 
     def get_serializer_class(self):

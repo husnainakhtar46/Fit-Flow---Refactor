@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plus, Search, Layers, ChevronRight } from 'lucide-react';
+import { Plus, Search, Layers, ChevronRight, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/shared/Pagination';
@@ -16,6 +16,9 @@ interface StyleListViewProps {
   customerFilter: string;
   setCustomerFilter: (c: string) => void;
   customers: any[];
+  factoryFilter: string;
+  setFactoryFilter: (f: string) => void;
+  factories: any[];
   page: number;
   setPage: (p: number) => void;
   onSelectStyle: (styleId: string) => void;
@@ -30,6 +33,9 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
   customerFilter,
   setCustomerFilter,
   customers,
+  factoryFilter,
+  setFactoryFilter,
+  factories,
   page,
   setPage,
   onSelectStyle,
@@ -39,6 +45,8 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
 
   const styles: StyleMaster[] = stylesData?.results || (Array.isArray(stylesData) ? stylesData : []);
   const totalCount = stylesData?.count;
+  const safeCustomers = Array.isArray(customers) ? customers : [];
+  const safeFactories = Array.isArray(factories) ? factories : [];
 
   return (
     <div className="space-y-6 pt-2">
@@ -46,6 +54,7 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pt-1">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Style Cycle & Comments</h1>
+          <p className="text-sm text-gray-500">Track sample approval stages, revisions, and QA feedback</p>
         </div>
 
         {!isReadOnly && canEditStyleCycle && (
@@ -62,20 +71,33 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by Style Name or PO Number..."
-            className="pl-10 bg-white border-gray-300 h-10"
+            placeholder="Search by Style Name, PO Number, or Factory..."
+            className="pl-10 bg-white border-gray-300 h-10 text-xs sm:text-sm"
           />
         </div>
 
         <select
           value={customerFilter}
           onChange={(e) => setCustomerFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-md text-sm bg-white h-10 sm:w-60"
+          className="px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm bg-white h-10 sm:w-52"
         >
           <option value="">All Customers</option>
-          {(Array.isArray(customers) ? customers : []).map((c) => (
+          {safeCustomers.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
+            </option>
+          ))}
+        </select>
+
+        <select
+          value={factoryFilter}
+          onChange={(e) => setFactoryFilter(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-md text-xs sm:text-sm bg-white h-10 sm:w-52"
+        >
+          <option value="">All Factories</option>
+          {safeFactories.map((f) => (
+            <option key={f.id} value={f.id}>
+              {f.name}
             </option>
           ))}
         </select>
@@ -109,8 +131,16 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
                 <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600">
                   {style.style_name}
                 </h3>
-                <p className="text-xs text-gray-500">PO: {style.po_number || '-'}</p>
-                <p className="text-xs text-gray-600">Color: {style.color || '-'}</p>
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>PO: {style.po_number || '-'}</span>
+                  <span>Color: {style.color || '-'}</span>
+                </div>
+
+                {style.factory_name && (
+                  <div className="text-[11px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-100 inline-flex items-center gap-1">
+                    <Building2 className="w-3 h-3" /> {style.factory_name}
+                  </div>
+                )}
               </div>
 
               <div className="mt-4 pt-3 border-t flex items-center justify-between text-xs text-gray-500">
@@ -138,3 +168,5 @@ export const StyleListView: React.FC<StyleListViewProps> = ({
     </div>
   );
 };
+
+export default StyleListView;

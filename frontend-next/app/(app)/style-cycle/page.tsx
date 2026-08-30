@@ -90,6 +90,7 @@ export default function StyleCyclePage() {
             comments={sc.sampleComments}
             isLoading={sc.isCommentsLoading}
             customers={sc.customers}
+            factories={sc.factories}
             isSubmittingStyle={sc.updateStyleMutation.isPending}
             onBack={() => sc.setSelectedStyleId(null)}
             onEditStyle={(data) => {
@@ -113,6 +114,17 @@ export default function StyleCyclePage() {
               }
             }}
             onDeleteImage={(imageId) => sc.deleteCommentImageMutation.mutate(imageId)}
+            onAddLink={({ label, url }) => {
+              if (sc.selectedStyleId) {
+                sc.addStyleLinkMutation.mutate({
+                  styleId: sc.selectedStyleId,
+                  label,
+                  url,
+                });
+              }
+            }}
+            onDeleteLink={(linkId) => sc.deleteStyleLinkMutation.mutate(linkId)}
+            isAddingLink={sc.addStyleLinkMutation.isPending}
           />
         )
       ) : (
@@ -124,6 +136,9 @@ export default function StyleCyclePage() {
           customerFilter={sc.customerFilter}
           setCustomerFilter={sc.setCustomerFilter}
           customers={sc.customers}
+          factoryFilter={sc.factoryFilter}
+          setFactoryFilter={sc.setFactoryFilter}
+          factories={sc.factories}
           page={sc.page}
           setPage={sc.setPage}
           onSelectStyle={(id) => sc.setSelectedStyleId(id)}
@@ -144,6 +159,7 @@ export default function StyleCyclePage() {
         onSubmit={handleStyleSubmit}
         style={sc.editingStyle}
         customers={sc.customers}
+        factories={sc.factories}
         isSubmitting={sc.createStyleMutation.isPending || sc.updateStyleMutation.isPending}
       />
 

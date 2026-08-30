@@ -41,6 +41,8 @@ export type StyleMaster = {
   color: string;
   customer?: string;
   customer_name?: string;
+  factory?: string;
+  factory_name?: string;
   season?: string;
   created_at: string;
   updated_at?: string;
@@ -56,6 +58,7 @@ export const INITIAL_STYLE_STATE = {
   style_name: '',
   color: '',
   customer: '',
+  factory: '',
   season: '',
 };
 
@@ -67,6 +70,13 @@ export const SAMPLE_STAGES = [
   'Shipment Sample',
   'Proto',
 ];
+
+export function getOrdinalSample(n?: number): string {
+  if (!n) return '';
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
 
 export type CommentCategoryKey = 'general' | 'fit' | 'workmanship' | 'wash' | 'fabric' | 'accessories';
 
