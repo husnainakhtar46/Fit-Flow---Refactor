@@ -4,7 +4,7 @@ import React from 'react';
 import { Pencil, Trash2, Calendar, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CommentImageTiles } from './CommentImageTiles';
-import { SampleComment } from './types';
+import { SampleComment, COMMENT_CATEGORIES, SampleImage } from './types';
 import { formatDate } from '@/utils/dateFormatter';
 
 interface SampleCommentCardProps {
@@ -37,23 +37,31 @@ export const SampleCommentCard: React.FC<SampleCommentCardProps> = ({
     }
   };
 
-  const commentCategories = [
-    { label: 'General', text: comment.comments_general },
-    { label: 'Fit', text: comment.comments_fit },
-    { label: 'Workmanship', text: comment.comments_workmanship },
-    { label: 'Wash', text: comment.comments_wash },
-    { label: 'Fabric', text: comment.comments_fabric },
-    { label: 'Accessories', text: comment.comments_accessories },
-  ].filter((c) => !!c.text);
-
   const stageDisplay = comment.sample_number_display
     ? `${comment.sample_type || comment.sample_stage || 'Sample'} (${comment.sample_number_display})`
     : comment.sample_type || comment.sample_stage || 'Sample Stage';
 
-  const safeImages = Array.isArray(comment.images) ? comment.images : [];
+  const safeImages: SampleImage[] = Array.isArray(comment.images) ? comment.images : [];
+
+  // Group active categories that have either text feedback or attached photos
+  const activeCategories = COMMENT_CATEGORIES.map((cat) => {
+    const text = comment[cat.commentField] as string | undefined;
+    const catImages = safeImages.filter((img) => {
+      const imgCat = (img.category || '').toLowerCase();
+      if (cat.key === 'general') return !imgCat || imgCat === 'general';
+      return imgCat === cat.key;
+    });
+
+    return {
+      config: cat,
+      text: text?.trim() || '',
+      images: catImages,
+      hasContent: !!text?.trim() || catImages.length > 0,
+    };
+  }).filter((c) => c.hasContent);
 
   return (
-    <div className="bg-white border rounded-lg p-4 space-y-3 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white border rounded-lg p-4 space-y-3.5 shadow-sm hover:shadow-md transition-shadow">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2.5">
         <div className="flex items-center gap-2">
@@ -69,6 +77,7 @@ export const SampleCommentCard: React.FC<SampleCommentCardProps> = ({
                 variant="ghost"
                 onClick={() => onEdit(comment)}
                 className="h-7 w-7 text-gray-500 hover:text-blue-600"
+                title="Edit Stage Feedback"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </Button>
@@ -77,6 +86,7 @@ export const SampleCommentCard: React.FC<SampleCommentCardProps> = ({
                 variant="ghost"
                 onClick={() => onDelete(comment.id)}
                 className="h-7 w-7 text-gray-500 hover:text-red-600"
+                title="Delete Stage Feedback"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </Button>
@@ -86,41 +96,58 @@ export const SampleCommentCard: React.FC<SampleCommentCardProps> = ({
       </div>
 
       {/* Meta Dates & Tracking */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500">
-        {comment.sample_submission_date && (
-          <span className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5" /> Submitted: {formatDate(comment.sample_submission_date)}
-          </span>
-        )}
-        {comment.courier_tracking_number && (
-          <span className="flex items-center gap-1">
-            <Truck className="w-3.5 h-3.5" /> Tracking: {comment.courier_tracking_number}
-          </span>
-        )}
-      </div>
+      {(comment.sample_submission_date || comment.courier_tracking_number) && (
+        <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 bg-gray-50/70 px-3 py-1.5 rounded-md border border-gray-100">
+          {comment.sample_submission_date && (
+            <span className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-gray-400" /> Submitted: {formatDate(comment.sample_submission_date)}
+            </span>
+          )}
+          {comment.courier_tracking_number && (
+            <span className="flex items-center gap-1.5">
+              <Truck className="w-3.5 h-3.5 text-gray-400" /> Tracking: {comment.courier_tracking_number}
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* Comment Blocks */}
-      {commentCategories.length > 0 ? (
-        <div className="space-y-2 pt-1">
-          {commentCategories.map((c) => (
-            <div key={c.label} className="text-xs">
-              <span className="font-bold text-gray-700">{c.label}: </span>
-              <span className="text-gray-600 whitespace-pre-wrap">{c.text}</span>
+      {/* Category Feedback Blocks with Per-Category Photos */}
+      {activeCategories.length > 0 ? (
+        <div className="space-y-3 pt-1">
+          {activeCategories.map(({ config, text, images }) => (
+            <div key={config.key} className="border border-gray-100 rounded-lg p-3 bg-gray-50/40 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-800 uppercase tracking-wide">
+                  {config.label}
+                </span>
+                {images.length > 0 && (
+                  <span className="text-[10px] text-gray-500 bg-white px-2 py-0.5 rounded border">
+                    {images.length} {images.length === 1 ? 'photo' : 'photos'}
+                  </span>
+                )}
+              </div>
+
+              {text && (
+                <p className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">
+                  {text}
+                </p>
+              )}
+
+              {images.length > 0 && (
+                <CommentImageTiles
+                  images={images}
+                  onDeleteImage={onDeleteImage}
+                  canEdit={canEdit}
+                />
+              )}
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-xs text-gray-400 italic">No category feedback written.</p>
-      )}
-
-      {/* Attached Images */}
-      {safeImages.length > 0 && (
-        <CommentImageTiles
-          images={safeImages}
-          onDeleteImage={onDeleteImage}
-          canEdit={canEdit}
-        />
+        <p className="text-xs text-gray-400 italic py-2">No category feedback or photos logged for this stage.</p>
       )}
     </div>
   );
 };
+
+export default SampleCommentCard;

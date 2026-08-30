@@ -1,7 +1,10 @@
 export type SampleImage = {
   id: string;
   image: string;
+  image_url?: string;
   caption?: string;
+  category?: 'general' | 'fit' | 'workmanship' | 'wash' | 'fabric' | 'accessories' | string;
+  uploaded_at?: string;
   created_at?: string;
 };
 
@@ -17,6 +20,12 @@ export type SampleComment = {
   comments_wash?: string;
   comments_fabric?: string;
   comments_accessories?: string;
+  general_edited_at?: string;
+  fit_edited_at?: string;
+  workmanship_edited_at?: string;
+  wash_edited_at?: string;
+  fabric_edited_at?: string;
+  accessories_edited_at?: string;
   status?: 'pending' | 'in_review' | 'approved' | 'rejected' | 'revised';
   sample_submission_date?: string;
   courier_tracking_number?: string;
@@ -57,4 +66,60 @@ export const SAMPLE_STAGES = [
   'SMS',
   'Shipment Sample',
   'Proto',
+];
+
+export type CommentCategoryKey = 'general' | 'fit' | 'workmanship' | 'wash' | 'fabric' | 'accessories';
+
+export interface CommentCategoryConfig {
+  key: CommentCategoryKey;
+  label: string;
+  commentField: keyof Pick<
+    SampleComment,
+    | 'comments_general'
+    | 'comments_fit'
+    | 'comments_workmanship'
+    | 'comments_wash'
+    | 'comments_fabric'
+    | 'comments_accessories'
+  >;
+  placeholder: string;
+}
+
+export const COMMENT_CATEGORIES: CommentCategoryConfig[] = [
+  {
+    key: 'general',
+    label: 'General Feedback',
+    commentField: 'comments_general',
+    placeholder: 'General feedback, summary remarks, overall sample feedback...',
+  },
+  {
+    key: 'fit',
+    label: 'Fit Comments',
+    commentField: 'comments_fit',
+    placeholder: 'Fit remarks, silhouette balance, measurements...',
+  },
+  {
+    key: 'workmanship',
+    label: 'Workmanship Comments',
+    commentField: 'comments_workmanship',
+    placeholder: 'Stitching, construction, seam quality, finishing...',
+  },
+  {
+    key: 'wash',
+    label: 'Wash Comments',
+    commentField: 'comments_wash',
+    placeholder: 'Wash shade, effect, handfeel, dry processing...',
+  },
+  {
+    key: 'fabric',
+    label: 'Fabric Comments',
+    commentField: 'comments_fabric',
+    placeholder: 'Fabric weight, color matching, texture, defects...',
+  },
+  {
+    key: 'accessories',
+    label: 'Accessories Comments',
+    commentField: 'comments_accessories',
+    placeholder: 'Labels, tags, buttons, zippers, trims...',
+  },
 ];

@@ -1,4 +1,5 @@
 import imageCompression from 'browser-image-compression';
+import { getBaseURL } from './api';
 
 const DEFAULT_OPTIONS: Parameters<typeof imageCompression>[1] = {
   maxSizeMB: 0.5,
@@ -7,6 +8,21 @@ const DEFAULT_OPTIONS: Parameters<typeof imageCompression>[1] = {
   useWebWorker: true,
   initialQuality: 0.85,
 };
+
+export function getFullImageUrl(url?: string | null): string {
+  if (!url) return '';
+  if (
+    url.startsWith('http://') ||
+    url.startsWith('https://') ||
+    url.startsWith('blob:') ||
+    url.startsWith('data:')
+  ) {
+    return url;
+  }
+  const base = getBaseURL().replace(/\/+$/, '');
+  const path = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${path}`;
+}
 
 export async function compressImage(
   file: File,

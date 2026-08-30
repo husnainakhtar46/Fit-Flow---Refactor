@@ -84,10 +84,10 @@ class StyleMasterViewSet(viewsets.ModelViewSet):
         style = self.get_object()
         if request.method == 'GET':
             comments = style.comments.prefetch_related('images').order_by('-created_at')
-            serializer = SampleCommentSerializer(comments, many=True)
+            serializer = SampleCommentSerializer(comments, many=True, context={'request': request})
             return Response(serializer.data)
         elif request.method == 'POST':
-            serializer = SampleCommentSerializer(data=request.data)
+            serializer = SampleCommentSerializer(data=request.data, context={'request': request})
             if serializer.is_valid():
                 serializer.save(style=style, created_by=request.user)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -96,7 +96,7 @@ class StyleMasterViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def add_comment(self, request, pk=None):
         style = self.get_object()
-        serializer = SampleCommentSerializer(data=request.data)
+        serializer = SampleCommentSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             serializer.save(style=style, created_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -127,7 +127,7 @@ class SampleCommentViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        queryset = SampleComment.objects.select_related('style', 'created_by').order_by('-created_at')
+        queryset = SampleComment.objects.select_related('style', 'created_by').prefetch_related('images').order_by('-created_at')
         style_id = self.request.query_params.get('style')
         if style_id:
             queryset = queryset.filter(style_id=style_id)

@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { getFullImageUrl } from '@/lib/imageUtils';
 
 export interface LightboxItem {
   type: 'existing' | 'pending';
@@ -58,6 +59,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
   }
 
   const currentItem = items[activeIndex];
+  const fullSrc = getFullImageUrl(currentItem.src);
 
   return (
     <div
@@ -106,7 +108,7 @@ export const ImageLightboxModal: React.FC<ImageLightboxModalProps> = ({
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={currentItem.src}
+          src={fullSrc}
           alt={currentItem.caption || `Image ${activeIndex + 1}`}
           className="max-w-[85vw] max-h-[80vh] object-contain rounded-lg shadow-2xl"
         />

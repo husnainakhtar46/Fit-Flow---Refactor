@@ -15,10 +15,20 @@ class StyleLinkSerializer(serializers.ModelSerializer):
 
 
 class SampleCommentImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = SampleCommentImage
-        fields = ['id', 'image', 'caption', 'category', 'uploaded_at']
+        fields = ['id', 'image', 'image_url', 'caption', 'category', 'uploaded_at']
         read_only_fields = ['id', 'uploaded_at']
+
+    def get_image_url(self, obj):
+        if not obj.image:
+            return None
+        request = self.context.get('request')
+        if request is not None:
+            return request.build_absolute_uri(obj.image.url)
+        return obj.image.url
 
 
 class SampleCommentSerializer(serializers.ModelSerializer):

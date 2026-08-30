@@ -6,6 +6,9 @@ import { StyleListView } from '@/features/style-cycle/StyleListView';
 import { StyleDetailView } from '@/features/style-cycle/StyleDetailView';
 import { CommentEditForm } from '@/features/style-cycle/CommentEditForm';
 import { StyleFormModal } from '@/features/style-cycle/StyleFormModal';
+import { CommentCategoryKey } from '@/features/style-cycle/types';
+import { compressImage } from '@/lib/imageUtils';
+import { toast } from 'sonner';
 
 export default function StyleCyclePage() {
   const sc = useStyleCycle();
@@ -21,36 +24,55 @@ export default function StyleCyclePage() {
     }
   };
 
-  const handleCommentSubmit = async (data: any, newImages: File[]) => {
+  const handleCommentSubmit = async (
+    data: any,
+    pendingImagesByCategory: Record<CommentCategoryKey, File[]>
+  ) => {
     try {
+      let commentId = sc.editingComment?.id;
+
       if (sc.editingComment) {
         await sc.updateCommentMutation.mutateAsync({
           commentId: sc.editingComment.id,
           data,
         });
-        for (const img of newImages) {
-          const fd = new FormData();
-          fd.append('image', img);
-          await sc.uploadCommentImageMutation.mutateAsync({
-            commentId: sc.editingComment.id,
-            formData: fd,
-          });
-        }
       } else if (sc.selectedStyleId) {
         const res = await sc.createCommentMutation.mutateAsync({
           styleId: sc.selectedStyleId,
           data,
         });
-        if (res?.data?.id) {
-          for (const img of newImages) {
+        commentId = res?.data?.id;
+      }
+
+      if (commentId) {
+        const uploadPromises: Promise<any>[] = [];
+        let totalFiles = 0;
+
+        for (const [category, files] of Object.entries(pendingImagesByCategory)) {
+          for (const file of files) {
+            totalFiles++;
+            const compressed = await compressImage(file);
             const fd = new FormData();
-            fd.append('image', img);
-            await sc.uploadCommentImageMutation.mutateAsync({
-              commentId: res.data.id,
-              formData: fd,
-            });
+            fd.append('image', compressed);
+            fd.append('category', category);
+            uploadPromises.push(
+              sc.uploadCommentImageMutation.mutateAsync({
+                commentId,
+                formData: fd,
+              })
+            );
           }
         }
+
+        if (uploadPromises.length > 0) {
+          await Promise.all(uploadPromises);
+          toast.success(`${totalFiles} photo(s) uploaded successfully`);
+        }
+
+        // Guarantee fresh data with newly uploaded images
+        sc.queryClient.invalidateQueries({ queryKey: ['sample-comments', sc.selectedStyleId] });
+        sc.queryClient.invalidateQueries({ queryKey: ['styles'] });
+        sc.queryClient.invalidateQueries({ queryKey: ['style-detail', sc.selectedStyleId] });
       }
     } catch {
       // Error is caught and surfaced by mutation onError
@@ -136,8 +158,11 @@ export default function StyleCyclePage() {
           styleId={sc.selectedStyleId}
           comment={sc.editingComment}
           onSubmit={handleCommentSubmit}
+          onDeleteExistingImage={(imageId) => sc.deleteCommentImageMutation.mutate(imageId)}
           isSubmitting={
-            sc.createCommentMutation.isPending || sc.updateCommentMutation.isPending
+            sc.createCommentMutation.isPending ||
+            sc.updateCommentMutation.isPending ||
+            sc.uploadCommentImageMutation.isPending
           }
         />
       )}

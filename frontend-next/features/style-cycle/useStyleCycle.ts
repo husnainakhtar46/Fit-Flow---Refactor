@@ -120,7 +120,7 @@ export function useStyleCycle() {
       queryClient.invalidateQueries({ queryKey: ['sample-comments', selectedStyleId] });
       queryClient.invalidateQueries({ queryKey: ['styles'] });
       setIsCommentFormOpen(false);
-      toast.success('Sample stage comment added');
+      toast.success('Sample stage comment saved');
     },
     onError: (err: any) => {
       toast.error(formatApiError(err, 'Failed to add comment'));
@@ -155,7 +155,9 @@ export function useStyleCycle() {
       api.post(`/sample-comments/${commentId}/upload_image/`, formData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sample-comments', selectedStyleId] });
-      toast.success('Image uploaded');
+    },
+    onError: (err: any) => {
+      toast.error(formatApiError(err, 'Failed to upload photo'));
     },
   });
 
@@ -168,6 +170,7 @@ export function useStyleCycle() {
   });
 
   return {
+    queryClient,
     selectedStyleId,
     setSelectedStyleId,
     search,
