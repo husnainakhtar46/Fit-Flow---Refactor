@@ -70,6 +70,10 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
   const [showPOSuggestions, setShowPOSuggestions] = React.useState(false);
   const [showStyleSuggestions, setShowStyleSuggestions] = React.useState(false);
 
+  const safeCustomers = Array.isArray(customers) ? customers : [];
+  const safeFactories = Array.isArray(factories) ? factories : [];
+  const safeTemplates = Array.isArray(templates) ? templates : [];
+
   const poValue = watch('po_number') || '';
   const styleValue = watch('style') || '';
   const poSuggestions = searchByPO(poValue);
@@ -78,7 +82,7 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
   const handleTemplateChange = (templateId: string) => {
     setValue('template', templateId);
     if (!templateId) return;
-    const template = templates.find((t) => String(t.id) === String(templateId));
+    const template = safeTemplates.find((t) => String(t.id) === String(templateId));
     if (template && template.poms) {
       replace(
         template.poms.map((pom: any) => ({
@@ -143,7 +147,7 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
                 className="w-full px-3 py-2 border rounded-md text-sm bg-white"
               >
                 <option value="">-- Load from Template --</option>
-                {templates.map((t) => (
+                {safeTemplates.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.name} ({t.poms?.length || 0} POMs)
                   </option>
@@ -171,7 +175,7 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
                     setValue('style', match.style_name);
                     if (match.color) setValue('color', match.color);
                     if (match.customer) {
-                      const matchedCust = customers.find(
+                      const matchedCust = safeCustomers.find(
                         (c) => String(c.id) === String(match.customer) || c.name.toLowerCase() === match.customer?.toLowerCase()
                       );
                       setValue('customer', matchedCust ? matchedCust.id : match.customer);
@@ -184,10 +188,10 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
 
             {/* Style */}
             <div className="space-y-1.5 relative">
-              <Label className="text-xs font-semibold">Style *</Label>
+              <Label className="text-xs font-semibold">Style Name *</Label>
               <Input
                 {...register('style')}
-                placeholder="Style Name"
+                placeholder="Style Name / No."
                 onFocus={() => setShowStyleSuggestions(true)}
                 required
               />
@@ -197,6 +201,10 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
                 suggestions={styleSuggestions}
                 onSelect={(val) => {
                   setValue('style', val);
+                  const colors = getColorSuggestions(val);
+                  if (colors.length > 0 && !getValues('color')) {
+                    setValue('color', colors[0]);
+                  }
                   setShowStyleSuggestions(false);
                 }}
               />
@@ -208,9 +216,9 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
               <Input {...register('color')} placeholder="e.g. Navy Blue" />
             </div>
 
-            {/* Stage */}
+            {/* Sample Stage */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Stage *</Label>
+              <Label className="text-xs font-semibold">Sample Stage *</Label>
               <select
                 {...register('stage')}
                 className="w-full px-3 py-2 border rounded-md text-sm bg-white"
@@ -227,15 +235,10 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
             {/* Customer */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Customer</Label>
-              <select
-                {...register('customer')}
-                className="w-full px-3 py-2 border rounded-md text-sm bg-white"
-              >
+              <select {...register('customer')} className="w-full px-3 py-2 border rounded-md text-sm bg-white">
                 <option value="">Select Customer</option>
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
+                {safeCustomers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>
@@ -243,15 +246,10 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
             {/* Factory */}
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Factory</Label>
-              <select
-                {...register('factory')}
-                className="w-full px-3 py-2 border rounded-md text-sm bg-white"
-              >
+              <select {...register('factory')} className="w-full px-3 py-2 border rounded-md text-sm bg-white">
                 <option value="">Select Factory</option>
-                {factories.map((f) => (
-                  <option key={f.id} value={f.name}>
-                    {f.name}
-                  </option>
+                {safeFactories.map((f) => (
+                  <option key={f.id} value={f.name}>{f.name}</option>
                 ))}
               </select>
             </div>

@@ -17,11 +17,16 @@ export function useMasterData() {
     queryFn: async () => {
       try {
         const res = await api.get('/factories/');
-        const data = res.data.results || res.data || [];
+        const data = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.results)
+          ? res.data.results
+          : [];
         await cacheFactories(data);
         return data;
       } catch {
-        return (await getCachedFactories()) || [];
+        const cached = await getCachedFactories();
+        return Array.isArray(cached) ? cached : [];
       }
     },
     staleTime: 1000 * 60 * 5,
@@ -32,11 +37,16 @@ export function useMasterData() {
     queryFn: async () => {
       try {
         const res = await api.get('/customers/');
-        const data = res.data.results || res.data || [];
+        const data = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.results)
+          ? res.data.results
+          : [];
         await cacheCustomers(data);
         return data;
       } catch {
-        return (await getCachedCustomers()) || [];
+        const cached = await getCachedCustomers();
+        return Array.isArray(cached) ? cached : [];
       }
     },
     staleTime: 1000 * 60 * 5,
@@ -47,20 +57,28 @@ export function useMasterData() {
     queryFn: async () => {
       try {
         const res = await api.get('/templates/');
-        const data = res.data.results || res.data || [];
+        const data = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.results)
+          ? res.data.results
+          : [];
         await cacheTemplates(data);
         return data;
       } catch {
-        return (await getCachedTemplates()) || [];
+        const cached = await getCachedTemplates();
+        return Array.isArray(cached) ? cached : [];
       }
     },
     staleTime: 1000 * 60 * 5,
   });
 
+  const safeArray = (d: any) =>
+    Array.isArray(d) ? d : Array.isArray(d?.results) ? d.results : [];
+
   return {
-    factories: factoriesQuery.data || [],
-    customers: customersQuery.data || [],
-    templates: templatesQuery.data || [],
+    factories: safeArray(factoriesQuery.data),
+    customers: safeArray(customersQuery.data),
+    templates: safeArray(templatesQuery.data),
     isLoading: factoriesQuery.isLoading || customersQuery.isLoading || templatesQuery.isLoading,
   };
 }
