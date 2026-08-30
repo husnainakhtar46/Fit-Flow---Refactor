@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+
 /**
  * Centralized authentication hook for role-based access control.
  * Provides user type and permission checking utilities.
@@ -31,35 +33,33 @@ export interface AuthState {
   canDownloadPdf: boolean;
 }
 
-export const useAuth = (): AuthState => {
-  if (typeof window === 'undefined') {
-    return {
-      userType: 'qa',
-      isSuperUser: false,
-      isAuthenticated: false,
-      userId: null,
-      canViewDashboard: false,
-      canViewCustomers: false,
-      canViewTemplates: false,
-      canViewResources: false,
-      canCreateInspections: false,
-      canEditEvaluation: false,
-      canEditFinalInspection: () => false,
-      canAddCustomerFeedback: false,
-      canEditCustomers: false,
-      canEditFactories: false,
-      canEditStyleCycle: false,
-      canEditTemplates: false,
-      isReadOnly: false,
-      canDownloadPdf: true,
-    };
-  }
+const DEFAULT_AUTH_STATE: AuthState = {
+  userType: 'qa',
+  isSuperUser: false,
+  isAuthenticated: false,
+  userId: null,
+  canViewDashboard: false,
+  canViewCustomers: false,
+  canViewTemplates: false,
+  canViewResources: false,
+  canCreateInspections: false,
+  canEditEvaluation: false,
+  canEditFinalInspection: () => false,
+  canAddCustomerFeedback: false,
+  canEditCustomers: false,
+  canEditFactories: false,
+  canEditStyleCycle: false,
+  canEditTemplates: false,
+  isReadOnly: false,
+  canDownloadPdf: true,
+};
 
-  const userType = (localStorage.getItem('user_type') || 'qa') as UserType;
-  const isSuperUser = localStorage.getItem('is_superuser') === 'true';
-  const isAuthenticated = !!localStorage.getItem('access_token');
-  const userId = localStorage.getItem('user_id');
-
+function computeAuthState(
+  userType: UserType,
+  isSuperUser: boolean,
+  isAuthenticated: boolean,
+  userId: string | null
+): AuthState {
   if (isSuperUser) {
     return {
       userType: 'admin',
@@ -103,7 +103,8 @@ export const useAuth = (): AuthState => {
   const isReadOnly = userType === 'merchandiser';
   const canViewResources = isSuperUser || userType === 'quality_head';
   const canEditCustomers = isSuperUser || userType === 'quality_head';
-  const canEditFactories = isSuperUser || userType === 'quality_head' || userType === 'quality_supervisor';
+  const canEditFactories =
+    isSuperUser || userType === 'quality_head' || userType === 'quality_supervisor';
   const canEditStyleCycle = userType !== 'merchandiser';
   const canEditTemplates = isSuperUser || userType === 'quality_head';
   const canDownloadPdf = true;
@@ -128,6 +129,26 @@ export const useAuth = (): AuthState => {
     isReadOnly,
     canDownloadPdf,
   };
+}
+
+export const useAuth = (): AuthState => {
+  const [authState, setAuthState] = useState<AuthState>(DEFAULT_AUTH_STATE);
+
+  useEffect(() => {
+    try {
+      const userType = (localStorage.getItem('user_type') || 'qa') as UserType;
+      const isSuperUser = localStorage.getItem('is_superuser') === 'true';
+      const isAuthenticated = !!localStorage.getItem('access_token');
+      const userId = localStorage.getItem('user_id');
+
+      setAuthState(computeAuthState(userType, isSuperUser, isAuthenticated, userId));
+    } catch {
+      // Fallback to default if localStorage is inaccessible
+      setAuthState(DEFAULT_AUTH_STATE);
+    }
+  }, []);
+
+  return authState;
 };
 
 export default useAuth;
