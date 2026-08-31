@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from .models import (
     Customer, CustomerEmail, Template, TemplatePOM, Inspection, Measurement, InspectionImage,
     FinalInspection, FinalInspectionDefect, FinalInspectionSizeCheck, FinalInspectionImage,
-    UserProfile
+    UserProfile, EmailOutbox,
 )
 
 User = get_user_model()
@@ -47,3 +47,18 @@ admin.site.register(FinalInspection)
 admin.site.register(FinalInspectionDefect)
 admin.site.register(FinalInspectionSizeCheck)
 admin.site.register(FinalInspectionImage)
+
+
+@admin.register(EmailOutbox)
+class EmailOutboxAdmin(admin.ModelAdmin):
+    """Admin view for monitoring queued email delivery status."""
+    list_display = ['subject_short', 'recipients', 'status', 'attachment_filename', 'created_at', 'sent_at']
+    list_filter = ['status', 'created_at']
+    search_fields = ['recipients', 'subject', 'error_message']
+    readonly_fields = ['id', 'recipients', 'cc', 'subject', 'body', 'attachment_filename', 'created_at', 'sent_at', 'error_message']
+    ordering = ['-created_at']
+
+    def subject_short(self, obj):
+        return obj.subject[:60]
+    subject_short.short_description = 'Subject'
+

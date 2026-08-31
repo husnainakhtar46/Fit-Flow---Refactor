@@ -120,3 +120,40 @@ input[type=number]::-webkit-outer-spin-button {
 input[type=number] {
   -moz-appearance: textfield;
 }
+
+/* ============================================================
+   Print Styles — applied when user prints or saves as PDF
+   via the browser's native File → Print dialog.
+   ============================================================ */
+@media print {
+  /* Hide navigation, sidebars, action buttons, and toasts */
+  nav,
+  aside,
+  header,
+  .no-print,
+  [role="dialog"],
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+
+  /* Clean white background for printing */
+  body {
+    background-color: white !important;
+    color: black !important;
+  }
+
+  /* Prevent section breaks inside cards and table rows */
+  .print-avoid-break,
+  tr,
+  td,
+  th {
+    page-break-inside: avoid;
+  }
+
+  /* A4 page format with comfortable margins */
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}
+

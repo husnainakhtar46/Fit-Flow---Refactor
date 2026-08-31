@@ -198,6 +198,21 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
 
         return super().to_internal_value(mutable_data)
 
+    def validate(self, data):
+        """
+        Server-side AQL integrity guard.
+
+        Rejects negative defect counts and strips any client-supplied 'result'
+        override — the model's save() recalculates result as the true source of
+        truth, preventing a frontend from forcing a Pass on a Fail inspection.
+        """
+        for field in ('critical_found', 'major_found', 'minor_found'):
+            value = data.get(field)
+            if value is not None and value < 0:
+                raise serializers.ValidationError({field: 'Defect count cannot be negative.'})
+        data.pop('result', None)
+        return data
+
     def create(self, validated_data):
         defects_data = validated_data.pop('defects', [])
         size_checks_data = validated_data.pop('size_checks', [])

@@ -196,29 +196,18 @@ class FinalInspectionViewSet(viewsets.ModelViewSet):
         buffer = generate_final_inspection_pdf(final_inspection)
         filename = f"FIR_{final_inspection.order_no}_{final_inspection.style_no}.pdf"
 
-        try:
-            from qc.gmail_service import send_gmail_message
-            attachments = [(filename, buffer.getvalue(), "application/pdf")]
-            send_gmail_message(
-                to_emails=to_emails,
-                subject=subject,
-                body=body,
-                attachments=attachments,
-                cc_emails=cc_emails if cc_emails else None
-            )
-            return Response({"sent": True, "to": to_emails, "cc": cc_emails, "method": "gmail_api"})
-        except Exception as gmail_error:
-            try:
-                email = EmailMessage(
-                    subject,
-                    body,
-                    settings.EMAIL_HOST_USER,
-                    to_emails,
-                    cc=cc_emails if cc_emails else None
-                )
-                email.attach(filename, buffer.getvalue(), "application/pdf")
-                email.send(fail_silently=False)
-                return Response({"sent": True, "to": to_emails, "cc": cc_emails, "method": "smtp"})
-            except Exception as smtp_error:
-                error_msg = f"Gmail API: {str(gmail_error)} | SMTP: {str(smtp_error)}"
-                return Response({"error": f"Email failed: {error_msg}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        from qc.gmail_service import queue_email
+        queue_email(
+            to_emails=to_emails,
+            subject=subject,
+            body=body,
+            attachment_bytes=buffer.getvalue(),
+            attachment_filename=filename,
+            cc_emails=cc_emails if cc_emails else None,
+        )
+        return Response({
+            "queued": True,
+            "to": to_emails,
+            "cc": cc_emails,
+            "message": "Email queued. It will be delivered in the background.",
+        })

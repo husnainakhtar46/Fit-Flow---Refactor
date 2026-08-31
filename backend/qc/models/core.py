@@ -96,3 +96,43 @@ class OTPVerification(models.Model):
 
     def __str__(self):
         return f"OTP for {self.user.email} - {'Used' if self.is_used else 'Active'}"
+
+
+class EmailOutbox(models.Model):
+    """
+    Outbox log for all outgoing emails queued via the Gmail OAuth2 service.
+
+    Emails are written here first (PENDING) and then sent asynchronously
+    in a background thread. Failed sends (e.g. expired OAuth token) record
+    the error_message so an admin can diagnose and retry.
+    """
+    STATUS_PENDING = 'PENDING'
+    STATUS_SENT = 'SENT'
+    STATUS_FAILED = 'FAILED'
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_SENT, 'Sent'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    recipients = models.TextField(help_text='Comma-separated To: addresses')
+    cc = models.TextField(blank=True, help_text='Comma-separated CC: addresses')
+    subject = models.CharField(max_length=512)
+    body = models.TextField()
+    # Attachment metadata only (binary is never stored in DB)
+    attachment_filename = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    error_message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Email Outbox'
+        verbose_name_plural = 'Email Outbox'
+
+    def __str__(self):
+        return f"[{self.status}] {self.subject[:60]} → {self.recipients[:40]}"
+

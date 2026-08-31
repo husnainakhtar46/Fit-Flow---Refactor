@@ -4,6 +4,7 @@ from .core import (
     CustomerEmail,
     Factory,
     OTPVerification,
+    EmailOutbox,
 )
 from .template import (
     Template,
@@ -39,6 +40,7 @@ __all__ = [
     "CustomerEmail",
     "Factory",
     "OTPVerification",
+    "EmailOutbox",
     "Template",
     "TemplatePOM",
     "FilterPreset",
