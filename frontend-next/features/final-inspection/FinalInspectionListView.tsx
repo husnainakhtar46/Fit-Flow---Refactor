@@ -143,7 +143,7 @@ export const FinalInspectionListView: React.FC<FinalInspectionListViewProps> = (
                   <TableCell className="font-medium text-gray-900">{item.style || item.style_no || '-'}</TableCell>
                   <TableCell>{item.po_number || item.order_no || '-'}</TableCell>
                   <TableCell>{item.customer_name || item.customer?.name || '-'}</TableCell>
-                  <TableCell>{item.factory || '-'}</TableCell>
+                  <TableCell>{item.factory_name || item.factory || '-'}</TableCell>
                   <TableCell>
                     <span className="px-2 py-0.5 text-xs rounded bg-purple-50 text-purple-700 font-medium">
                       {item.inspection_type || item.inspection_attempt || 'Final'}

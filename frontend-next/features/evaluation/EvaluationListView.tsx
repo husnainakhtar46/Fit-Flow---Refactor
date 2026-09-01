@@ -174,7 +174,7 @@ export const EvaluationListView: React.FC<EvaluationListViewProps> = ({
                   <TableCell>{item.color || '-'}</TableCell>
                   <TableCell>{item.po_number || '-'}</TableCell>
                   <TableCell>{item.customer_name || item.customer?.name || '-'}</TableCell>
-                  <TableCell>{item.factory || '-'}</TableCell>
+                  <TableCell>{item.factory_name || item.factory || '-'}</TableCell>
                   <TableCell>
                     <span className="px-2 py-0.5 text-xs rounded bg-blue-50 text-blue-700 font-medium">
                       {item.stage}

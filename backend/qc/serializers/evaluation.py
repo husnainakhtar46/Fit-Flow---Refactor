@@ -53,12 +53,13 @@ class InspectionImageSerializer(serializers.ModelSerializer):
 
 class InspectionListSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
+    factory_name = serializers.CharField(source='factory.name', read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
 
     class Meta:
         model = Inspection
         fields = [
-            "id", "style", "color", "po_number", "factory", "stage", "template", "customer", "customer_name",
+            "id", "style", "color", "po_number", "factory", "factory_name", "stage", "template", "customer", "customer_name",
             "remarks", "decision", "created_at", "updated_at", "created_by_username",
             "customer_decision", "customer_feedback_comments", "customer_feedback_date",
             "is_draft"
