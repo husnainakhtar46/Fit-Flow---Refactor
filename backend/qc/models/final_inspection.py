@@ -216,6 +216,7 @@ class FinalInspectionDefect(models.Model):
 class FinalInspectionSizeCheck(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     final_inspection = models.ForeignKey(FinalInspection, related_name='size_checks', on_delete=models.CASCADE)
+    color = models.CharField(max_length=100, blank=True, default='')
     size = models.CharField(max_length=50)
     order_qty = models.PositiveIntegerField(default=0)
     packed_qty = models.PositiveIntegerField(default=0)
@@ -231,10 +232,10 @@ class FinalInspectionSizeCheck(models.Model):
         return round((self.difference / self.order_qty) * 100, 2)
 
     def __str__(self):
-        return f"{self.final_inspection.order_no} - Size {self.size}"
+        return f"{self.final_inspection.order_no} - {self.color} Size {self.size}"
 
     class Meta:
-        ordering = ['size']
+        ordering = ['color', 'size']
 
 
 class FinalInspectionImage(models.Model):
@@ -265,13 +266,14 @@ class FinalInspectionImage(models.Model):
 class FinalInspectionMeasurement(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     final_inspection = models.ForeignKey(FinalInspection, related_name='measurements', on_delete=models.CASCADE)
+    color = models.CharField(max_length=100, blank=True, default='')
     pom_name = models.CharField(max_length=255)
     tol = models.FloatField(default=0.0)
     spec = models.FloatField(default=0.0)
     size_name = models.CharField(max_length=50, blank=True)
 
     def __str__(self):
-        return f"{self.pom_name} - {self.final_inspection.order_no}"
+        return f"{self.pom_name} ({self.color} - {self.size_name}) - {self.final_inspection.order_no}"
 
     class Meta:
         ordering = ['id']

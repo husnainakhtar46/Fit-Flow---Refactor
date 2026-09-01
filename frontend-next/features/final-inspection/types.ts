@@ -7,6 +7,7 @@ export type FIDefect = {
 };
 
 export type FISizeBreakdown = {
+  id?: string;
   color: string;
   size: string;
   order_qty: number;
@@ -14,12 +15,16 @@ export type FISizeBreakdown = {
 };
 
 export type FIMeasurementSample = {
-  size: string;
-  sample_index: number;
+  id?: string;
+  index?: number;
+  sample_index?: number;
   value: number | string | null;
 };
 
 export type FIMeasurementRow = {
+  id?: string;
+  color?: string;
+  size_name?: string;
   pom_name: string;
   tol: number | string;
   std: number | string;

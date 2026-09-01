@@ -36,8 +36,8 @@ class FinalInspectionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = FinalInspection.objects.select_related('customer', 'created_by').order_by('-created_at')
 
-        if self.action in ['retrieve', 'update', 'partial_update']:
-            queryset = queryset.prefetch_related('defects', 'size_checks', 'images')
+        if self.action in ['retrieve', 'update', 'partial_update', 'pdf']:
+            queryset = queryset.prefetch_related('defects', 'size_checks', 'images', 'measurements__samples')
 
         if self.action == 'list':
             queryset = queryset.filter(is_draft=False)

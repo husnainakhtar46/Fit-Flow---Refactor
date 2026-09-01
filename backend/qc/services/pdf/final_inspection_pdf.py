@@ -136,59 +136,74 @@ def generate_final_inspection_pdf(final_inspection):
     p.drawString(50, y_pos, "4. Measurement Data")
     y_pos -= 30
 
-    if final_inspection.measurements.exists():
-        headers = ["POM", "Tol (+/-)", "Standard", "S1", "S2", "S3", "S4", "S5", "S6"]
-        col_widths = [140, 50, 50, 40, 40, 40, 40, 40, 40]
+    measurements = list(final_inspection.measurements.all())
+    if measurements:
+        from collections import defaultdict
+        groups = defaultdict(lambda: defaultdict(list))
+        for m in measurements:
+            c = m.color or final_inspection.color or 'Default'
+            s = m.size_name or 'All'
+            groups[c][s].append(m)
 
-        p.setFont("Helvetica-Bold", 9)
-        p.setFillColorRGB(0.9, 0.9, 0.9)
-        p.rect(50, y_pos - 20, sum(col_widths), 20, fill=1)
-        p.setFillColorRGB(0, 0, 0)
+        headers = ["POM", "Tol (+/-)", "Standard", "S1", "S2", "S3", "S4", "S5"]
+        col_widths = [160, 50, 50, 45, 45, 45, 45, 45]
 
-        curr_x = 50
-        for i, h in enumerate(headers):
-            p.drawString(curr_x + 5, y_pos - 14, h)
-            curr_x += col_widths[i]
-        y_pos -= 20
+        for color_name, sizes_dict in groups.items():
+            for size_name, m_list in sizes_dict.items():
+                y_pos = check_page_break(y_pos, required_space=90)
+                p.setFont("Helvetica-Bold", 10)
+                p.setFillColorRGB(0.1, 0.2, 0.5)
+                p.drawString(50, y_pos, f"Color: {color_name}  |  Size: {size_name}")
+                p.setFillColorRGB(0, 0, 0)
+                y_pos -= 16
 
-        p.setFont("Helvetica", 9)
-        for m in final_inspection.measurements.all():
-            samples_dict = {s.index: s.value for s in m.samples.all()}
+                p.setFont("Helvetica-Bold", 9)
+                p.setFillColorRGB(0.9, 0.9, 0.9)
+                p.rect(50, y_pos - 18, sum(col_widths), 18, fill=1)
+                p.setFillColorRGB(0, 0, 0)
 
-            def get_sample_val(idx):
-                val = samples_dict.get(idx)
-                return val if val is not None else "-"
+                curr_x = 50
+                for i, h in enumerate(headers):
+                    p.drawString(curr_x + 5, y_pos - 13, h)
+                    curr_x += col_widths[i]
+                y_pos -= 18
 
-            vals = [
-                m.pom_name, str(m.tol), str(m.spec),
-                get_sample_val(1), get_sample_val(2), get_sample_val(3),
-                get_sample_val(4), get_sample_val(5), get_sample_val(6)
-            ]
-            curr_x = 50
+                p.setFont("Helvetica", 8)
+                for m in m_list:
+                    samples_dict = {s.index: s.value for s in m.samples.all()}
+                    def get_sample_val(idx):
+                        val = samples_dict.get(idx)
+                        return str(val) if val is not None else "-"
 
-            for i, v in enumerate(vals):
-                p.rect(curr_x, y_pos - 20, col_widths[i], 20)
-                is_fail = False
-                if i > 2 and v and v != "-":
-                    try:
-                        val_float = float(v)
-                        if abs(val_float - m.spec) > m.tol:
-                            is_fail = True
-                    except Exception:
-                        pass
+                    vals = [
+                        m.pom_name, str(m.tol), str(m.spec),
+                        get_sample_val(1), get_sample_val(2), get_sample_val(3),
+                        get_sample_val(4), get_sample_val(5)
+                    ]
+                    curr_x = 50
+                    for i, v in enumerate(vals):
+                        p.rect(curr_x, y_pos - 18, col_widths[i], 18)
+                        is_fail = False
+                        if i > 2 and v != "-":
+                            try:
+                                if abs(float(v) - m.spec) > m.tol:
+                                    is_fail = True
+                            except Exception:
+                                pass
 
-                if is_fail:
-                    p.setFillColorRGB(1, 0, 0)
-                    p.setFont("Helvetica-Bold", 9)
-                else:
-                    p.setFillColorRGB(0, 0, 0)
-                    p.setFont("Helvetica", 9)
+                        if is_fail:
+                            p.setFillColorRGB(1, 0, 0)
+                            p.setFont("Helvetica-Bold", 8)
+                        else:
+                            p.setFillColorRGB(0, 0, 0)
+                            p.setFont("Helvetica", 8)
 
-                p.drawString(curr_x + 5, y_pos - 14, str(v))
-                curr_x += col_widths[i]
+                        p.drawString(curr_x + 4, y_pos - 13, str(v)[:22])
+                        curr_x += col_widths[i]
 
-            y_pos -= 20
-            y_pos = check_page_break(y_pos)
+                    y_pos -= 18
+                    y_pos = check_page_break(y_pos)
+                y_pos -= 15
     else:
         p.drawString(50, y_pos, "No measurements recorded.")
 

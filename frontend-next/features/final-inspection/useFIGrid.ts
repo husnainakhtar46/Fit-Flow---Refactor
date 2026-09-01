@@ -9,6 +9,7 @@ interface UseFIGridProps {
   setValue: UseFormSetValue<any>;
   getValues: UseFormGetValues<any>;
   fields: any[];
+  rowIndices?: number[];
 }
 
 export function useFIGrid({
@@ -16,7 +17,11 @@ export function useFIGrid({
   setValue,
   getValues,
   fields,
+  rowIndices,
 }: UseFIGridProps) {
+  const rowCount = rowIndices ? rowIndices.length : fields.length;
+  const toGlobalRow = (r: number) => (rowIndices && rowIndices[r] !== undefined ? rowIndices[r] : r);
+
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [isDragSelecting, setIsDragSelecting] = useState(false);
   const [dragStart, setDragStart] = useState<{ row: number; col: number } | null>(null);
@@ -81,11 +86,12 @@ export function useFIGrid({
         selectedCells.forEach((cellId) => {
           const [rStr, k] = cellId.split(':');
           const r = parseInt(rStr, 10);
+          const globalR = toGlobalRow(r);
           if (k.startsWith('sample_')) {
             const sIdx = parseInt(k.replace('sample_', ''), 10) - 1;
-            setValue(`measurements.${r}.samples.${sIdx}.value`, '');
+            setValue(`measurements.${globalR}.samples.${sIdx}.value`, '');
           } else {
-            setValue(`measurements.${r}.${k}`, '');
+            setValue(`measurements.${globalR}.${k}`, '');
           }
         });
         toast.info(`Cleared ${selectedCells.size} cells`);
@@ -98,7 +104,7 @@ export function useFIGrid({
       let targetCol = colIndex;
 
       if (e.key === 'ArrowUp') targetRow = Math.max(0, index - 1);
-      if (e.key === 'ArrowDown' || e.key === 'Enter') targetRow = Math.min(fields.length - 1, index + 1);
+      if (e.key === 'ArrowDown' || e.key === 'Enter') targetRow = Math.min(rowCount - 1, index + 1);
       if (e.key === 'ArrowLeft') {
         const input = e.target as HTMLInputElement;
         if (input.selectionStart === 0 && input.selectionEnd === 0) {
@@ -145,7 +151,8 @@ export function useFIGrid({
 
       rows.forEach((rowText, rOffset) => {
         const targetRow = rowIndex + rOffset;
-        if (targetRow >= fields.length) return;
+        if (targetRow >= rowCount) return;
+        const globalRow = toGlobalRow(targetRow);
 
         const cells = rowText.split('\t');
         cells.forEach((cellText, cOffset) => {
@@ -158,10 +165,10 @@ export function useFIGrid({
           if (colKey.startsWith('sample_')) {
             const sampleIndex = parseInt(colKey.replace('sample_', ''), 10) - 1;
             const parsed = trimmed === '' ? '' : isNaN(Number(trimmed)) ? trimmed : Number(trimmed);
-            setValue(`measurements.${targetRow}.samples.${sampleIndex}.value`, parsed);
+            setValue(`measurements.${globalRow}.samples.${sampleIndex}.value`, parsed);
           } else {
             const parsed = trimmed === '' ? '' : isNaN(Number(trimmed)) ? trimmed : Number(trimmed);
-            setValue(`measurements.${targetRow}.${colKey}`, parsed);
+            setValue(`measurements.${globalRow}.${colKey}`, parsed);
           }
         });
       });
@@ -188,14 +195,15 @@ export function useFIGrid({
 
     for (let r = minRow; r <= maxRow; r++) {
       const rowVals: string[] = [];
+      const globalRow = toGlobalRow(r);
       for (let c = minCol; c <= maxCol; c++) {
         const colKey = columnKeys[c];
         let val = '';
         if (colKey.startsWith('sample_')) {
           const sIdx = parseInt(colKey.replace('sample_', ''), 10) - 1;
-          val = measurements?.[r]?.samples?.[sIdx]?.value ?? '';
+          val = measurements?.[globalRow]?.samples?.[sIdx]?.value ?? '';
         } else {
-          val = measurements?.[r]?.[colKey] ?? '';
+          val = measurements?.[globalRow]?.[colKey] ?? '';
         }
         rowVals.push(String(val));
       }

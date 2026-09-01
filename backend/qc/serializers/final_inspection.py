@@ -28,10 +28,11 @@ class FinalInspectionMeasurementSerializer(serializers.ModelSerializer):
     tol = serializers.FloatField(required=False, default=0.0)
     spec = serializers.FloatField(required=False, default=0.0)
     pom_name = serializers.CharField(required=False, allow_blank=True, default="")
+    color = serializers.CharField(required=False, allow_blank=True, default="")
 
     class Meta:
         model = FinalInspectionMeasurement
-        fields = ['id', 'pom_name', 'tol', 'spec', 'size_name', 'samples']
+        fields = ['id', 'color', 'pom_name', 'tol', 'spec', 'size_name', 'samples']
 
     def to_internal_value(self, data):
         mutable_data = data.copy() if hasattr(data, 'copy') else dict(data)
@@ -96,10 +97,11 @@ class FinalInspectionDefectSerializer(serializers.ModelSerializer):
 class FinalInspectionSizeCheckSerializer(serializers.ModelSerializer):
     difference = serializers.ReadOnlyField()
     deviation_percent = serializers.ReadOnlyField()
+    color = serializers.CharField(required=False, allow_blank=True, default="")
 
     class Meta:
         model = FinalInspectionSizeCheck
-        fields = ['id', 'size', 'order_qty', 'packed_qty', 'difference', 'deviation_percent']
+        fields = ['id', 'color', 'size', 'order_qty', 'packed_qty', 'difference', 'deviation_percent']
 
     def to_internal_value(self, data):
         mutable_data = data.copy() if hasattr(data, 'copy') else dict(data)
@@ -213,6 +215,38 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
         data.pop('result', None)
         return data
 
+    def _save_size_checks(self, final_inspection, size_checks_data):
+        import uuid
+        if not size_checks_data:
+            return
+        objs = [
+            FinalInspectionSizeCheck(id=sc.get('id') or uuid.uuid4(), final_inspection=final_inspection, **sc)
+            for sc in size_checks_data
+        ]
+        FinalInspectionSizeCheck.objects.bulk_create(objs)
+
+    def _save_measurements(self, final_inspection, measurements_data):
+        import uuid
+        if not measurements_data:
+            return
+        meas_objs = []
+        samples_by_meas_id = []
+        for m_data in measurements_data:
+            samples_data = m_data.pop('samples', [])
+            meas_id = m_data.get('id') or uuid.uuid4()
+            meas_objs.append(FinalInspectionMeasurement(id=meas_id, final_inspection=final_inspection, **m_data))
+            samples_by_meas_id.append((meas_id, samples_data))
+
+        FinalInspectionMeasurement.objects.bulk_create(meas_objs)
+
+        all_samples = []
+        for meas_id, samples_data in samples_by_meas_id:
+            for s_data in samples_data:
+                sample_id = s_data.get('id') or uuid.uuid4()
+                all_samples.append(FinalInspectionMeasurementSample(id=sample_id, measurement_id=meas_id, **s_data))
+        if all_samples:
+            FinalInspectionMeasurementSample.objects.bulk_create(all_samples)
+
     def create(self, validated_data):
         defects_data = validated_data.pop('defects', [])
         size_checks_data = validated_data.pop('size_checks', [])
@@ -223,14 +257,8 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
         for defect_data in defects_data:
             FinalInspectionDefect.objects.create(final_inspection=final_inspection, **defect_data)
 
-        for size_check_data in size_checks_data:
-            FinalInspectionSizeCheck.objects.create(final_inspection=final_inspection, **size_check_data)
-
-        for m_data in measurements_data:
-            samples_data = m_data.pop('samples', [])
-            measurement = FinalInspectionMeasurement.objects.create(final_inspection=final_inspection, **m_data)
-            for s_data in samples_data:
-                FinalInspectionMeasurementSample.objects.create(measurement=measurement, **s_data)
+        self._save_size_checks(final_inspection, size_checks_data)
+        self._save_measurements(final_inspection, measurements_data)
 
         return final_inspection
 
@@ -250,15 +278,10 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
 
         if size_checks_data is not None:
             instance.size_checks.all().delete()
-            for size_check_data in size_checks_data:
-                FinalInspectionSizeCheck.objects.create(final_inspection=instance, **size_check_data)
+            self._save_size_checks(instance, size_checks_data)
 
         if measurements_data is not None:
             instance.measurements.all().delete()
-            for m_data in measurements_data:
-                samples_data = m_data.pop('samples', [])
-                measurement = FinalInspectionMeasurement.objects.create(final_inspection=instance, **m_data)
-                for s_data in samples_data:
-                    FinalInspectionMeasurementSample.objects.create(measurement=measurement, **s_data)
+            self._save_measurements(instance, measurements_data)
 
         return instance

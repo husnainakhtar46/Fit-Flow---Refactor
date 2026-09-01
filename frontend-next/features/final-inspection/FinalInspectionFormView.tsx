@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { GeneralInfoSection } from './GeneralInfoSection';
 import { SizeBreakdown } from './SizeBreakdown';
-import { FIMeasurementChart } from './FIMeasurementChart';
+import { ColorSizeMeasurementSection } from './ColorSizeMeasurementSection';
 import { DefectSection } from './DefectSection';
 import { FIShipmentRemarks } from './FIShipmentRemarks';
 import { FIDefect, FISizeBreakdown } from './types';
@@ -101,8 +101,8 @@ export const FinalInspectionFormView: React.FC<FinalInspectionFormViewProps> = (
 
           <hr />
 
-          {/* Measurement Audit */}
-          <FIMeasurementChart
+          {/* Measurement Audit (Color-wise & Size-wise) */}
+          <ColorSizeMeasurementSection
             fields={fields}
             append={append}
             remove={remove}
@@ -111,9 +111,10 @@ export const FinalInspectionFormView: React.FC<FinalInspectionFormViewProps> = (
             setValue={setValue}
             getValues={getValues}
             sampleCount={sampleCount}
-            setSampleCount={setSampleCount}
             templates={templates}
             watch={watch}
+            sizeBreakdowns={sizeBreakdowns}
+            defaultColor={watch('color') || 'Default'}
           />
 
           <hr />

@@ -187,11 +187,24 @@ export function useFinalInspection() {
   });
 
   const handleFormSubmit = async (data: any) => {
+    const sanitizedMeasurements = (data.measurements || []).map((m: any) => ({
+      ...m,
+      color: (m.color || data.color || '').trim(),
+      size_name: (m.size_name || 'M').trim(),
+      std: m.std === '' || m.std === undefined ? 0 : Number(m.std),
+      tol: m.tol === '' || m.tol === undefined ? 0 : Number(m.tol),
+      samples: (m.samples || []).map((s: any, idx: number) => ({
+        index: s.index ?? idx + 1,
+        value: s.value === '' || s.value === undefined ? null : Number(s.value),
+      })),
+    }));
+
     const payload = {
       ...data,
       is_draft: false,
       defects_data: defects,
       size_breakdowns: sizeBreakdowns,
+      measurements: sanitizedMeasurements,
     };
 
     if (!navigator.onLine) {
@@ -250,8 +263,11 @@ export function useFinalInspection() {
       if (full.size_checks || full.size_breakdowns) {
         setSizeBreakdowns(full.size_checks || full.size_breakdowns);
       }
-      if (full.measurements?.[0]?.samples?.length) {
-        setSampleCount(full.measurements[0].samples.length);
+      if (Array.isArray(full.measurements)) {
+        replace(full.measurements);
+        if (full.measurements[0]?.samples?.length) {
+          setSampleCount(full.measurements[0].samples.length);
+        }
       }
       setIsOpen(true);
     } catch {

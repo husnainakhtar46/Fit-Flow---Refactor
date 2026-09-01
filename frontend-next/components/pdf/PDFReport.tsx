@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { MeasurementSection } from './MeasurementSection';
 
 // Create styles
 const styles = StyleSheet.create({
@@ -204,46 +205,12 @@ export const PDFReport = ({ data, defects = [], images = [] }: PDFReportProps) =
                 </View>
             </Page>
 
-            {/* Page 2: Measurements */}
-            {data.measurements && data.measurements.length > 0 && (
-                <Page size="A4" style={styles.page}>
-                    <Text style={styles.sectionTitle}>3. Measurement Report</Text>
-                    <View style={styles.table}>
-                        <View style={styles.tableRow}>
-                            <View style={[styles.tableColWide, { backgroundColor: '#e4e4e4', width: '20%' }]}><Text>POM</Text></View>
-                            <View style={[styles.tableColHeader, { width: '10%' }]}><Text>Spec</Text></View>
-                            <View style={[styles.tableColHeader, { width: '10%' }]}><Text>Tol</Text></View>
-                            {Array.from({ length: Math.max(1, ...data.measurements.map((m: any) => m.samples?.length || 0)) }, (_, i) => (
-                                <View key={i} style={[styles.tableColHeader, { width: `${60 / (Math.max(1, ...data.measurements.map((m: any) => m.samples?.length || 0)))}%` }]}><Text>S{i + 1}</Text></View>
-                            ))}
-                        </View>
-                        {data.measurements.map((m: any, i: number) => {
-                            const maxSamples = Math.max(1, ...data.measurements.map((meas: any) => meas.samples?.length || 0));
-                            const samples = m.samples || [];
-                            const sampleWidth = `${60 / maxSamples}%`;
-
-                            return (
-                                <View key={i} style={styles.tableRow}>
-                                    <View style={[styles.tableColWide, { width: '20%' }]}><Text>{m.pom_name}</Text></View>
-                                    <View style={[styles.tableCol, { width: '10%' }]}><Text>{m.std ?? m.spec ?? '-'}</Text></View>
-                                    <View style={[styles.tableCol, { width: '10%' }]}><Text>{m.tol ?? '-'}</Text></View>
-                                    {Array.from({ length: maxSamples }, (_, idx) => {
-                                        const sample = samples.find((s: any) => s.index === idx + 1);
-                                        const val = sample?.value;
-                                        return (
-                                            <View key={idx} style={[styles.tableCol, { width: sampleWidth }]}>
-                                                <Text style={isOutOfTolerance(val, m.std ?? m.spec, m.tol) ? styles.oot : {}}>
-                                                    {val ?? '-'}
-                                                </Text>
-                                            </View>
-                                        );
-                                    })}
-                                </View>
-                            );
-                        })}
-                    </View>
-                </Page>
-            )}
+            {/* Page 2: Measurements (Color & Size-wise) */}
+            <MeasurementSection
+                measurements={data.measurements}
+                styles={styles}
+                isOutOfTolerance={isOutOfTolerance}
+            />
 
             {/* Page 3: Defects */}
             {defects && defects.length > 0 && (
