@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { Plus, X, Copy } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FISizeBreakdown } from './types';
@@ -14,7 +14,6 @@ interface SizeBreakdownProps {
 }
 
 const COMMON_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
-const COLOR_PRESETS = ['Navy', 'Black', 'White', 'Grey', 'Olive', 'Beige'];
 
 export const SizeBreakdown: React.FC<SizeBreakdownProps> = ({
   sizeBreakdowns,
@@ -121,15 +120,6 @@ export const SizeBreakdown: React.FC<SizeBreakdownProps> = ({
     regenerateMatrix(colorsToUse, ['S', 'M', 'L', 'XL']);
   };
 
-  // Copy all Order Qty -> Inspected Qty
-  const handleCopyOrderToInspected = () => {
-    const updated = sizeBreakdowns.map((r) => ({
-      ...r,
-      inspected_qty: r.order_qty || 0,
-    }));
-    setSizeBreakdowns(updated);
-  };
-
   const handleRowChange = (index: number, field: keyof FISizeBreakdown, value: any) => {
     const updated = [...sizeBreakdowns];
     updated[index] = {
@@ -157,18 +147,6 @@ export const SizeBreakdown: React.FC<SizeBreakdownProps> = ({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {sizeBreakdowns.length > 0 && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleCopyOrderToInspected}
-              className="text-xs h-8 gap-1 border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100"
-              title="Set all inspected quantities equal to order quantities"
-            >
-              <Copy className="w-3.5 h-3.5 text-blue-600" /> Copy Order Qty &rarr; Inspected
-            </Button>
-          )}
           <Button
             type="button"
             variant="outline"
@@ -225,30 +203,6 @@ export const SizeBreakdown: React.FC<SizeBreakdownProps> = ({
               <Plus className="w-3 h-3" /> Add
             </Button>
           </div>
-        </div>
-
-        {/* Preset colors suggestion pills */}
-        <div className="flex flex-wrap items-center gap-1.5 pl-20">
-          <span className="text-[11px] text-gray-400 font-medium">Quick presets:</span>
-          {COLOR_PRESETS.map((p) => {
-            const isAdded = activeColors.some((c) => c.toLowerCase() === p.toLowerCase());
-            return (
-              <button
-                key={p}
-                type="button"
-                disabled={isAdded}
-                onClick={() => handleAddColor(p)}
-                className={cn(
-                  'text-[10px] px-2 py-0.5 rounded border transition-colors',
-                  isAdded
-                    ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
-                    : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                )}
-              >
-                + {p}
-              </button>
-            );
-          })}
         </div>
       </div>
 
