@@ -1,7 +1,7 @@
 import uuid
 from django.db import models
 from django.contrib.auth import get_user_model
-from .core import Customer
+from .core import Customer, Factory
 from .template import Template
 
 User = get_user_model()
@@ -27,7 +27,7 @@ class Inspection(models.Model):
     style = models.CharField(max_length=255, blank=True, default="")
     color = models.CharField(max_length=255, blank=True)
     po_number = models.CharField(max_length=255, blank=True)
-    factory = models.CharField(max_length=255, blank=True, help_text='Factory name for analysis')
+    factory = models.ForeignKey(Factory, null=True, blank=True, on_delete=models.SET_NULL, related_name='evaluations')
     stage = models.CharField(max_length=20, choices=STAGE_CHOICES, default="Proto")
     template = models.ForeignKey(Template, null=True, blank=True, on_delete=models.SET_NULL)
     customer = models.ForeignKey(Customer, null=True, blank=True, on_delete=models.SET_NULL)

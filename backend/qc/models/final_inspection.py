@@ -1,7 +1,7 @@
 import uuid
 from django.db import models, transaction
 from django.contrib.auth import get_user_model
-from .core import Customer
+from .core import Customer, Factory
 
 User = get_user_model()
 
@@ -92,7 +92,7 @@ class FinalInspection(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     customer = models.ForeignKey(Customer, null=True, blank=True, on_delete=models.SET_NULL, related_name='final_inspections')
     supplier = models.CharField(max_length=255, blank=True)
-    factory = models.CharField(max_length=255, blank=True)
+    factory = models.ForeignKey(Factory, null=True, blank=True, on_delete=models.SET_NULL, related_name='final_inspections')
     inspection_date = models.DateField()
     order_no = models.CharField(max_length=255)
     style_no = models.CharField(max_length=255)

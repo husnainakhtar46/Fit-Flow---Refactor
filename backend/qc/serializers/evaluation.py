@@ -150,6 +150,21 @@ class InspectionSerializer(serializers.ModelSerializer):
                     obj = Customer.objects.create(name=cust)
                 mutable_data['customer'] = obj.pk
 
+        # Clean factory (UUID or name string)
+        fact = mutable_data.get('factory')
+        if fact == '' or fact == 'null':
+            mutable_data['factory'] = None
+        elif isinstance(fact, str):
+            import uuid
+            try:
+                uuid.UUID(fact)
+            except ValueError:
+                from qc.models import Factory
+                obj = Factory.objects.filter(name__iexact=fact).first()
+                if not obj:
+                    obj = Factory.objects.create(name=fact)
+                mutable_data['factory'] = obj.pk
+
         return super().to_internal_value(mutable_data)
 
     def create(self, validated_data):
