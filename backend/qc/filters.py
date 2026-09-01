@@ -1,7 +1,7 @@
 # qc/filters.py
 import django_filters
 from django.db import models
-from .models import Inspection
+from .models import Inspection, FinalInspection
 
 
 class InspectionFilter(django_filters.FilterSet):
@@ -49,3 +49,17 @@ class InspectionFilter(django_filters.FilterSet):
     class Meta:
         model = Inspection
         fields = ['decision', 'stage', 'customer', 'factory', 'created_at_after', 'created_at_before', 'search']
+
+
+class FinalInspectionFilter(django_filters.FilterSet):
+    """
+    Filtering for Final Inspection model
+    """
+    customer = django_filters.UUIDFilter(field_name='customer__id', label='Customer')
+    date_from = django_filters.DateFilter(field_name='inspection_date', lookup_expr='gte', label='From Date')
+    date_to = django_filters.DateFilter(field_name='inspection_date', lookup_expr='lte', label='To Date')
+    result = django_filters.ChoiceFilter(choices=[('Pending', 'Pending'), ('Pass', 'Pass'), ('Fail', 'Fail')], label='Result')
+
+    class Meta:
+        model = FinalInspection
+        fields = ['customer', 'result', 'date_from', 'date_to']

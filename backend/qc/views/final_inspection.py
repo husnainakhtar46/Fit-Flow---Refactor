@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.http import FileResponse
 
+from qc.filters import FinalInspectionFilter
 from qc.models import (
     FinalInspection,
     FinalInspectionImage,
@@ -29,6 +30,7 @@ class FinalInspectionViewSet(viewsets.ModelViewSet):
     permission_classes = [CanEditFinalInspection]
 
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
+    filterset_class = FinalInspectionFilter
     search_fields = ['order_no', 'style_no', 'factory', 'supplier', 'customer__name']
     ordering_fields = ['created_at', 'inspection_date', 'result', 'order_no']
     ordering = ['-created_at']
@@ -41,21 +43,6 @@ class FinalInspectionViewSet(viewsets.ModelViewSet):
 
         if self.action == 'list':
             queryset = queryset.filter(is_draft=False)
-
-        customer_id = self.request.query_params.get('customer')
-        if customer_id:
-            queryset = queryset.filter(customer_id=customer_id)
-
-        result = self.request.query_params.get('result')
-        if result:
-            queryset = queryset.filter(result=result)
-
-        date_from = self.request.query_params.get('date_from')
-        date_to = self.request.query_params.get('date_to')
-        if date_from:
-            queryset = queryset.filter(inspection_date__gte=date_from)
-        if date_to:
-            queryset = queryset.filter(inspection_date__lte=date_to)
 
         return queryset
 
