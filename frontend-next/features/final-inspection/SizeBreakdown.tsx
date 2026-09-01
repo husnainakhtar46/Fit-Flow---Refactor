@@ -1,61 +1,92 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FISizeBreakdown } from './types';
+import { SizeColorRow } from './SizeColorRow';
 import { SizeMatrixTable } from './SizeMatrixTable';
-import { cn } from '@/lib/utils';
 
 interface SizeBreakdownProps {
   sizeBreakdowns: FISizeBreakdown[];
   setSizeBreakdowns: React.Dispatch<React.SetStateAction<FISizeBreakdown[]>>;
 }
 
-const COMMON_SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
-
 export const SizeBreakdown: React.FC<SizeBreakdownProps> = ({
   sizeBreakdowns,
   setSizeBreakdowns,
 }) => {
   const [colorInput, setColorInput] = useState('');
-  const [customSizeInput, setCustomSizeInput] = useState('');
+  const [sizesInput, setSizesInput] = useState('');
 
-  // 1. Derive active unique colors from existing breakdowns
-  const activeColors = useMemo(() => {
-    const raw = sizeBreakdowns.map((r) => (r.color || '').trim()).filter(Boolean);
-    return Array.from(new Set(raw));
-  }, [sizeBreakdowns]);
-
-  // 2. Derive active unique sizes from existing breakdowns
-  const activeSizes = useMemo(() => {
+  // Master pool of sizes defined for this garment style
+  const [masterSizes, setMasterSizes] = useState<string[]>(() => {
     const raw = sizeBreakdowns.map((r) => (r.size || '').trim()).filter(Boolean);
     return Array.from(new Set(raw));
-  }, [sizeBreakdowns]);
+  });
 
-  // Lookup map for preserving entered order_qty and inspected_qty
-  const qtyMap = useMemo(() => {
-    const map = new Map<string, { order_qty: number; inspected_qty: number; id?: string }>();
+  // Map of colorway -> active sizes for that colorway
+  const [colorSizeMap, setColorSizeMap] = useState<Record<string, string[]>>(() => {
+    const map: Record<string, string[]> = {};
     sizeBreakdowns.forEach((r) => {
-      const k = `${(r.color || '').trim().toLowerCase()}|${(r.size || '').trim().toLowerCase()}`;
-      map.set(k, { order_qty: r.order_qty || 0, inspected_qty: r.inspected_qty || 0, id: r.id });
+      const c = (r.color || '').trim() || 'Default';
+      const s = (r.size || '').trim();
+      if (!s) return;
+      if (!map[c]) map[c] = [];
+      if (!map[c].includes(s)) map[c].push(s);
     });
     return map;
+  });
+
+  // Cache entered quantities to preserve them during size/color toggling
+  const qtyMap = useRef<Map<string, { order_qty: number; inspected_qty: number; id?: string }>>(
+    new Map()
+  );
+
+  // Sync qtyMap from incoming sizeBreakdowns (initial load / edits)
+  useEffect(() => {
+    sizeBreakdowns.forEach((r) => {
+      const k = `${(r.color || '').trim().toLowerCase()}|${(r.size || '').trim().toLowerCase()}`;
+      qtyMap.current.set(k, {
+        order_qty: r.order_qty || 0,
+        inspected_qty: r.inspected_qty || 0,
+        id: r.id,
+      });
+    });
   }, [sizeBreakdowns]);
 
-  // Helper to re-generate sizeBreakdowns matrix
-  const regenerateMatrix = useCallback(
-    (colors: string[], sizes: string[]) => {
+  // Handle asynchronous hydration (e.g. when editing a saved inspection)
+  useEffect(() => {
+    if (Object.keys(colorSizeMap).length === 0 && sizeBreakdowns.length > 0) {
+      const map: Record<string, string[]> = {};
+      const sizes: string[] = [];
+      sizeBreakdowns.forEach((r) => {
+        const c = (r.color || '').trim() || 'Default';
+        const s = (r.size || '').trim();
+        if (!s) return;
+        if (!map[c]) map[c] = [];
+        if (!map[c].includes(s)) map[c].push(s);
+        if (!sizes.includes(s)) sizes.push(s);
+      });
+      setColorSizeMap(map);
+      setMasterSizes(sizes);
+    }
+  }, [sizeBreakdowns, colorSizeMap]);
+
+  // Derives sizeBreakdowns flat rows from colorSizeMap + cached quantities
+  const applyMapUpdate = useCallback(
+    (newMap: Record<string, string[]>) => {
+      setColorSizeMap(newMap);
       const newRows: FISizeBreakdown[] = [];
-      colors.forEach((c) => {
-        sizes.forEach((s) => {
-          const k = `${c.trim().toLowerCase()}|${s.trim().toLowerCase()}`;
-          const existing = qtyMap.get(k);
+      Object.entries(newMap).forEach(([color, sizes]) => {
+        sizes.forEach((size) => {
+          const k = `${color.trim().toLowerCase()}|${size.trim().toLowerCase()}`;
+          const existing = qtyMap.current.get(k);
           newRows.push({
             id: existing?.id,
-            color: c.trim(),
-            size: s.trim(),
+            color: color.trim(),
+            size: size.trim(),
             order_qty: existing?.order_qty ?? 0,
             inspected_qty: existing?.inspected_qty ?? 0,
           });
@@ -63,122 +94,160 @@ export const SizeBreakdown: React.FC<SizeBreakdownProps> = ({
       });
       setSizeBreakdowns(newRows);
     },
-    [qtyMap, setSizeBreakdowns]
+    [setSizeBreakdowns]
   );
 
   // Add a new color chip
   const handleAddColor = (colorName: string) => {
     const trimmed = colorName.trim();
     if (!trimmed) return;
-    if (activeColors.some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
+    if (Object.keys(colorSizeMap).some((c) => c.toLowerCase() === trimmed.toLowerCase())) {
       setColorInput('');
       return;
     }
-    const newColors = [...activeColors, trimmed];
-    const sizesToUse = activeSizes.length > 0 ? activeSizes : ['S', 'M', 'L', 'XL'];
-    regenerateMatrix(newColors, sizesToUse);
+    // If we have a dummy 'Default' color and user adds first real color, replace it
+    const updatedMap = { ...colorSizeMap };
+    if (Object.keys(updatedMap).length === 1 && updatedMap['Default']) {
+      delete updatedMap['Default'];
+    }
+    updatedMap[trimmed] = masterSizes.length > 0 ? [...masterSizes] : [];
+    applyMapUpdate(updatedMap);
     setColorInput('');
   };
 
-  // Remove a color chip and all its rows
+  // Remove a color chip and its associated rows
   const handleRemoveColor = (colorToRemove: string) => {
-    const updated = sizeBreakdowns.filter(
-      (r) => (r.color || '').trim().toLowerCase() !== colorToRemove.toLowerCase()
-    );
-    setSizeBreakdowns(updated);
+    const updatedMap = { ...colorSizeMap };
+    delete updatedMap[colorToRemove];
+    applyMapUpdate(updatedMap);
   };
 
-  // Toggle a size pill
-  const handleToggleSize = (sizeToToggle: string) => {
-    const isCurrentlyActive = activeSizes.some(
-      (s) => s.toLowerCase() === sizeToToggle.toLowerCase()
-    );
+  // Add comma-separated sizes to master pool and all active colors
+  const handleAddMasterSizes = () => {
+    if (!sizesInput.trim()) return;
+    const parsed = sizesInput
+      .split(',')
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean);
 
-    if (isCurrentlyActive) {
-      const updated = sizeBreakdowns.filter(
-        (r) => (r.size || '').trim().toLowerCase() !== sizeToToggle.toLowerCase()
-      );
-      setSizeBreakdowns(updated);
+    if (parsed.length === 0) return;
+
+    // Append new sizes to master pool
+    const newMaster = [...masterSizes];
+    parsed.forEach((s) => {
+      if (!newMaster.includes(s)) newMaster.push(s);
+    });
+    setMasterSizes(newMaster);
+
+    // Apply to colors
+    const colors = Object.keys(colorSizeMap);
+    if (colors.length === 0) {
+      applyMapUpdate({ Default: parsed });
     } else {
-      const colorsToUse = activeColors.length > 0 ? activeColors : ['Default'];
-      const newSizes = [...activeSizes, sizeToToggle];
-      regenerateMatrix(colorsToUse, newSizes);
+      const updatedMap: Record<string, string[]> = {};
+      colors.forEach((c) => {
+        const currentSizes = colorSizeMap[c] || [];
+        const combined = [...currentSizes];
+        parsed.forEach((s) => {
+          if (!combined.includes(s)) combined.push(s);
+        });
+        updatedMap[c] = combined;
+      });
+      applyMapUpdate(updatedMap);
+    }
+    setSizesInput('');
+  };
+
+  // Toggle a size on/off for a specific color
+  const handleToggleColorSize = (color: string, size: string) => {
+    const currentSizes = colorSizeMap[color] || [];
+    const isCurrentlyActive = currentSizes.includes(size);
+    const updatedSizes = isCurrentlyActive
+      ? currentSizes.filter((s) => s !== size)
+      : [...currentSizes, size];
+
+    applyMapUpdate({
+      ...colorSizeMap,
+      [color]: updatedSizes,
+    });
+  };
+
+  // Add a unique size specifically to one color
+  const handleAddColorSize = (color: string, size: string) => {
+    if (!masterSizes.includes(size)) {
+      setMasterSizes((prev) => [...prev, size]);
+    }
+    const currentSizes = colorSizeMap[color] || [];
+    if (!currentSizes.includes(size)) {
+      applyMapUpdate({
+        ...colorSizeMap,
+        [color]: [...currentSizes, size],
+      });
     }
   };
 
-  // Add custom size
-  const handleAddCustomSize = () => {
-    const trimmed = customSizeInput.trim().toUpperCase();
-    if (!trimmed) return;
-    handleToggleSize(trimmed);
-    setCustomSizeInput('');
-  };
-
-  // Quick preset sizes: S-XL
-  const handleApplyStandardSizes = () => {
-    const colorsToUse = activeColors.length > 0 ? activeColors : ['Default'];
-    regenerateMatrix(colorsToUse, ['S', 'M', 'L', 'XL']);
-  };
-
+  // Handle cell edits in table
   const handleRowChange = (index: number, field: keyof FISizeBreakdown, value: any) => {
     const updated = [...sizeBreakdowns];
+    const val = field === 'order_qty' || field === 'inspected_qty' ? Number(value) || 0 : value;
     updated[index] = {
       ...updated[index],
-      [field]: field === 'order_qty' || field === 'inspected_qty' ? Number(value) || 0 : value,
+      [field]: val,
     };
+    const row = updated[index];
+    const k = `${(row.color || '').trim().toLowerCase()}|${(row.size || '').trim().toLowerCase()}`;
+    qtyMap.current.set(k, {
+      order_qty: row.order_qty || 0,
+      inspected_qty: row.inspected_qty || 0,
+      id: row.id,
+    });
     setSizeBreakdowns(updated);
   };
 
+  // Removing a row in table deselects that size for that color
   const handleRemoveRow = (index: number) => {
-    setSizeBreakdowns(sizeBreakdowns.filter((_, i) => i !== index));
+    const row = sizeBreakdowns[index];
+    if (!row) return;
+    const color = row.color || 'Default';
+    handleToggleColorSize(color, row.size);
   };
 
+  const activeColors = Object.keys(colorSizeMap);
   const totalOrderQty = sizeBreakdowns.reduce((sum, r) => sum + (r.order_qty || 0), 0);
   const totalInspectedQty = sizeBreakdowns.reduce((sum, r) => sum + (r.inspected_qty || 0), 0);
 
   return (
     <div className="space-y-4">
       {/* Section Header */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2">
-        <div>
-          <h3 className="text-base font-bold text-gray-900">Size & Quantity Breakdown</h3>
-          <p className="text-xs text-gray-500">
-            Define colorways and sizes to automatically generate the inspection breakdown table
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleApplyStandardSizes}
-            className="text-xs h-8"
-          >
-            Standard (S-XL)
-          </Button>
-        </div>
+      <div className="border-b pb-2">
+        <h3 className="text-base font-bold text-gray-900">Size & Quantity Breakdown</h3>
+        <p className="text-xs text-gray-500">
+          Add colorways and enter sizes to automatically generate the breakdown matrix
+        </p>
       </div>
 
-      {/* Builder Step 1: Colorways Tag Bar */}
-      <div className="bg-gray-50/80 p-3 rounded-md border border-gray-200 space-y-2.5">
+      {/* Step 1: Colorways Input */}
+      <div className="bg-gray-50/80 p-3 rounded-md border border-gray-200">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold text-gray-700 w-20 shrink-0">1. Colors:</span>
-          {activeColors.map((color) => (
-            <span
-              key={color}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-gray-800 border border-gray-300 shadow-sm"
-            >
-              <span>{color}</span>
-              <button
-                type="button"
-                onClick={() => handleRemoveColor(color)}
-                className="text-gray-400 hover:text-red-500 rounded-full p-0.5"
-                title={`Remove ${color}`}
+          <span className="text-xs font-bold text-gray-700 w-24 shrink-0">1. Colors:</span>
+          {activeColors
+            .filter((c) => c !== 'Default')
+            .map((color) => (
+              <span
+                key={color}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-white text-gray-800 border border-gray-300 shadow-sm"
               >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
+                <span>{color}</span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveColor(color)}
+                  className="text-gray-400 hover:text-red-500 rounded-full p-0.5"
+                  title={`Remove ${color}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
 
           <div className="inline-flex items-center gap-1">
             <Input
@@ -206,52 +275,53 @@ export const SizeBreakdown: React.FC<SizeBreakdownProps> = ({
         </div>
       </div>
 
-      {/* Builder Step 2: Size Toggles */}
-      <div className="bg-gray-50/80 p-3 rounded-md border border-gray-200 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-bold text-gray-700 w-20 shrink-0">2. Sizes:</span>
-        {COMMON_SIZES.map((size) => {
-          const isActive = activeSizes.some((s) => s.toLowerCase() === size.toLowerCase());
-          return (
-            <button
-              key={size}
+      {/* Step 2: Comma-Separated Sizes Entry & Per-Color Toggles */}
+      <div className="bg-gray-50/80 p-3 rounded-md border border-gray-200 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-gray-700 w-24 shrink-0">2. Add Sizes:</span>
+          <div className="flex-1 flex items-center gap-1.5 max-w-xl">
+            <Input
+              value={sizesInput}
+              onChange={(e) => setSizesInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddMasterSizes();
+                }
+              }}
+              placeholder="Enter sizes comma-separated (e.g. S, M, L, XL or 28, 30, 32)"
+              className="h-7 text-xs bg-white flex-1"
+            />
+            <Button
               type="button"
-              onClick={() => handleToggleSize(size)}
-              className={cn(
-                'px-3 py-1 text-xs rounded-full font-bold transition-all border shadow-sm',
-                isActive
-                  ? 'bg-primary text-white border-primary ring-2 ring-primary/20'
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-              )}
+              size="sm"
+              onClick={handleAddMasterSizes}
+              disabled={!sizesInput.trim()}
+              className="h-7 px-2.5 text-xs bg-primary text-white shrink-0"
             >
-              {size} {isActive && '✓'}
-            </button>
-          );
-        })}
-
-        <div className="inline-flex items-center gap-1 ml-2">
-          <Input
-            value={customSizeInput}
-            onChange={(e) => setCustomSizeInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleAddCustomSize();
-              }
-            }}
-            placeholder="Custom (e.g. 28)"
-            className="h-7 w-28 text-xs bg-white"
-          />
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={handleAddCustomSize}
-            disabled={!customSizeInput.trim()}
-            className="h-7 px-2 text-xs"
-          >
-            <Plus className="w-3 h-3" />
-          </Button>
+              <Plus className="w-3 h-3 mr-1" /> Add Sizes
+            </Button>
+          </div>
         </div>
+
+        {/* Per-Color Size Toggles */}
+        {activeColors.length > 0 && masterSizes.length > 0 && (
+          <div className="pt-2 border-t border-gray-200 space-y-1">
+            <div className="text-[11px] font-semibold text-gray-500 mb-1">
+              Sizes per color (click any pill to toggle on/off for that color):
+            </div>
+            {activeColors.map((color) => (
+              <SizeColorRow
+                key={color}
+                color={color}
+                masterSizes={masterSizes}
+                activeSizes={colorSizeMap[color] || []}
+                onToggleSize={handleToggleColorSize}
+                onAddColorSize={handleAddColorSize}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Step 3: Generated Matrix Table */}
