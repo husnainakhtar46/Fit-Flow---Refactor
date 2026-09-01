@@ -203,6 +203,7 @@ export function useFinalInspection() {
       ...data,
       is_draft: false,
       defects_data: defects,
+      size_checks: sizeBreakdowns,
       size_breakdowns: sizeBreakdowns,
       measurements: sanitizedMeasurements,
     };
@@ -222,11 +223,7 @@ export function useFinalInspection() {
         });
 
         // Client-side offline PDF generation
-        const fiDoc = React.createElement(PDFReport, {
-          data: payload,
-          defects: defects,
-          images: allImgPayload,
-        }) as any;
+        const fiDoc = React.createElement(PDFReport, { data: payload, defects, images: allImgPayload }) as any;
         const fiFilename = `Offline_FIR_${data.style || data.style_no || 'Report'}_${data.po_number || data.order_no || 'Draft'}.pdf`;
         await saveOfflinePdf(fiDoc, fiFilename);
 
@@ -260,8 +257,9 @@ export function useFinalInspection() {
           photo: d.photo_url || d.photo || null,
         }))
       );
-      if (full.size_checks || full.size_breakdowns) {
-        setSizeBreakdowns(full.size_checks || full.size_breakdowns);
+      const rawSizes = full.size_checks || full.size_breakdowns;
+      if (rawSizes) {
+        setSizeBreakdowns(rawSizes.map((sc: any) => ({ ...sc, inspected_qty: sc.inspected_qty ?? sc.packed_qty ?? 0 })));
       }
       if (Array.isArray(full.measurements)) {
         replace(full.measurements);

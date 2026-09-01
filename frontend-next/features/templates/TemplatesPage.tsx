@@ -57,7 +57,9 @@ export const TemplatesPage = () => {
 
   const templates: StyleTemplate[] =
     templatesData?.results || (Array.isArray(templatesData) ? templatesData : []);
-  const customers = customersData || [];
+  const customers: any[] = Array.isArray(customersData)
+    ? customersData
+    : customersData?.results || [];
   const totalCount = templatesData?.count;
 
   const createMutation = useMutation({

@@ -129,6 +129,36 @@ def generate_final_inspection_pdf(final_inspection):
         p.drawString(200, y_pos, row[1])
         y_pos -= 15
 
+    size_checks = list(final_inspection.size_checks.all())
+    if size_checks:
+        y_pos -= 8
+        p.setFont("Helvetica-Bold", 10)
+        p.drawString(50, y_pos, "Size & Color Breakdown:")
+        y_pos -= 14
+        sc_h = ["Color", "Size", "Order Qty", "Inspected Qty", "Diff"]
+        sc_w = [140, 60, 95, 95, 70]
+        sc_x = 50
+        p.setFillColorRGB(0.9, 0.9, 0.9)
+        p.rect(50, y_pos - 12, 460, 14, fill=1)
+        p.setFillColorRGB(0, 0, 0)
+        for i, h in enumerate(sc_h):
+            p.drawString(sc_x + 4, y_pos - 9, h)
+            sc_x += sc_w[i]
+        y_pos -= 14
+        p.setFont("Helvetica", 9)
+        for sc in size_checks:
+            diff = (sc.packed_qty or 0) - (sc.order_qty or 0)
+            diff_str = f"+{diff}" if diff > 0 else str(diff)
+            vals = [sc.color or "Default", sc.size, str(sc.order_qty), str(sc.packed_qty), diff_str]
+            sc_x = 50
+            for i, val in enumerate(vals):
+                p.rect(sc_x, y_pos - 11, sc_w[i], 13)
+                p.drawString(sc_x + 4, y_pos - 8, val)
+                sc_x += sc_w[i]
+            y_pos -= 13
+            if y_pos < 60:
+                break
+
     # Page 2: Measurements
     p.showPage()
     y_pos = height - 50

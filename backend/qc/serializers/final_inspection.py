@@ -98,10 +98,11 @@ class FinalInspectionSizeCheckSerializer(serializers.ModelSerializer):
     difference = serializers.ReadOnlyField()
     deviation_percent = serializers.ReadOnlyField()
     color = serializers.CharField(required=False, allow_blank=True, default="")
+    inspected_qty = serializers.IntegerField(source='packed_qty', required=False)
 
     class Meta:
         model = FinalInspectionSizeCheck
-        fields = ['id', 'color', 'size', 'order_qty', 'packed_qty', 'difference', 'deviation_percent']
+        fields = ['id', 'color', 'size', 'order_qty', 'packed_qty', 'inspected_qty', 'difference', 'deviation_percent']
 
     def to_internal_value(self, data):
         mutable_data = data.copy() if hasattr(data, 'copy') else dict(data)
@@ -219,10 +220,11 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
         import uuid
         if not size_checks_data:
             return
-        objs = [
-            FinalInspectionSizeCheck(id=sc.get('id') or uuid.uuid4(), final_inspection=final_inspection, **sc)
-            for sc in size_checks_data
-        ]
+        objs = []
+        for sc in size_checks_data:
+            sc_copy = dict(sc)
+            sc_id = sc_copy.pop('id', None) or uuid.uuid4()
+            objs.append(FinalInspectionSizeCheck(id=sc_id, final_inspection=final_inspection, **sc_copy))
         FinalInspectionSizeCheck.objects.bulk_create(objs)
 
     def _save_measurements(self, final_inspection, measurements_data):
@@ -232,9 +234,10 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
         meas_objs = []
         samples_by_meas_id = []
         for m_data in measurements_data:
-            samples_data = m_data.pop('samples', [])
-            meas_id = m_data.get('id') or uuid.uuid4()
-            meas_objs.append(FinalInspectionMeasurement(id=meas_id, final_inspection=final_inspection, **m_data))
+            m_copy = dict(m_data)
+            samples_data = m_copy.pop('samples', [])
+            meas_id = m_copy.pop('id', None) or uuid.uuid4()
+            meas_objs.append(FinalInspectionMeasurement(id=meas_id, final_inspection=final_inspection, **m_copy))
             samples_by_meas_id.append((meas_id, samples_data))
 
         FinalInspectionMeasurement.objects.bulk_create(meas_objs)
@@ -242,8 +245,9 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
         all_samples = []
         for meas_id, samples_data in samples_by_meas_id:
             for s_data in samples_data:
-                sample_id = s_data.get('id') or uuid.uuid4()
-                all_samples.append(FinalInspectionMeasurementSample(id=sample_id, measurement_id=meas_id, **s_data))
+                s_copy = dict(s_data)
+                sample_id = s_copy.pop('id', None) or uuid.uuid4()
+                all_samples.append(FinalInspectionMeasurementSample(id=sample_id, measurement_id=meas_id, **s_copy))
         if all_samples:
             FinalInspectionMeasurementSample.objects.bulk_create(all_samples)
 

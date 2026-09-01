@@ -58,12 +58,18 @@ export const InspectionFilters: React.FC<InspectionFiltersProps> = ({
 
   const { data: customersData } = useQuery({
     queryKey: ['customers'],
-    queryFn: async () => (await api.get('/customers/')).data,
+    queryFn: async () => {
+      const res = await api.get('/customers/');
+      return Array.isArray(res.data) ? res.data : res.data?.results || [];
+    },
   });
 
   const { data: factoriesData } = useQuery({
     queryKey: ['factories-filter'],
-    queryFn: async () => (await api.get('/factories/')).data,
+    queryFn: async () => {
+      const res = await api.get('/factories/');
+      return Array.isArray(res.data) ? res.data : res.data?.results || [];
+    },
   });
 
   const customers = Array.isArray(customersData) ? customersData : customersData?.results || [];
