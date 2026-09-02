@@ -1,3 +1,4 @@
+import io
 from datetime import date
 from django.test import TestCase
 from django.db import IntegrityError
@@ -118,4 +119,34 @@ class SchemaHardeningTests(TestCase):
         res = client.post(f"/api/inspections/{inspection.id}/delete_image/", {"image_id": str(img.id)}, format="json")
         self.assertEqual(res.status_code, 200)
         self.assertFalse(InspectionImage.objects.filter(id=img.id).exists())
+
+    def test_evaluation_pdf_multi_page_images(self):
+        """Evaluation PDF generator must paginate multiple attached images across pages smoothly."""
+        from PIL import Image as PILImage
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from qc.models import InspectionImage
+        from qc.services.pdf.evaluation_pdf import generate_pdf_buffer
+
+        inspection = Inspection.objects.create(
+            customer=self.customer,
+            style="Multi-photo Dress",
+            po_number="PO-PDF-1",
+            stage="Proto",
+            created_by=self.user,
+        )
+
+        for i in range(6):
+            img_buf = io.BytesIO()
+            pil_img = PILImage.new("RGB", (100, 100), color="blue")
+            pil_img.save(img_buf, format="JPEG")
+            img_buf.seek(0)
+            upload = SimpleUploadedFile(f"photo_{i}.jpg", img_buf.getvalue(), content_type="image/jpeg")
+            InspectionImage.objects.create(inspection=inspection, image=upload, caption=f"Photo #{i+1}")
+
+        pdf_buffer = generate_pdf_buffer(inspection)
+        self.assertIsNotNone(pdf_buffer)
+        pdf_bytes = pdf_buffer.getvalue()
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+        self.assertGreater(len(pdf_bytes), 1000)
+
 
