@@ -5,19 +5,6 @@ import api from '@/lib/api';
 import { compressImage } from '@/lib/imageUtils';
 import { ImageSlot } from './types';
 
-export const COMMON_PHOTO_CAPTIONS = [
-  'Wash Label',
-  'Care Label',
-  'Neck Seam',
-  'Side Seam',
-  'Measurement',
-  'Fabric Defect',
-  'Barcode / Hangtag',
-  'Packaging',
-  'Embroidery / Print',
-  'Detail View',
-];
-
 export const DEFAULT_MANDATORY_SLOTS: ImageSlot[] = [
   { file: null, caption: 'Front View', isPredefined: true },
   { file: null, caption: 'Back View', isPredefined: true },

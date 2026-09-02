@@ -5,7 +5,6 @@ import { Upload, X, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ImageSlot } from './types';
-import { COMMON_PHOTO_CAPTIONS } from './useEvaluationImages';
 
 interface ImageGalleryProps {
   imageSlots: ImageSlot[];
@@ -147,22 +146,6 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
-                  </div>
-                )}
-
-                {/* Quick caption suggestions for dynamic slots */}
-                {!isMandatory && !slot.caption && (
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {COMMON_PHOTO_CAPTIONS.slice(0, 3).map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => handleCaptionChange(index, suggestion)}
-                        className="text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-600 px-1.5 py-0.5 rounded transition-colors"
-                      >
-                        +{suggestion}
-                      </button>
-                    ))}
                   </div>
                 )}
               </div>
