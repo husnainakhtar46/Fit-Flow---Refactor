@@ -56,12 +56,13 @@ export function getAQLLimitValue(sampleSize: number, aqlLevel: string | number):
 
 export function calculateDefectLimits(
   sampleSize: number,
-  majorLevel: string | number = '2.5'
+  majorLevel: string | number = '2.5',
+  minorLevel: string | number = '4.0'
 ): AQLLimits {
   return {
     critical: { maxAllowed: 0 },
     major: { maxAllowed: getAQLLimitValue(sampleSize, majorLevel) },
-    minor: { maxAllowed: getAQLLimitValue(sampleSize, '4.0') },
+    minor: { maxAllowed: getAQLLimitValue(sampleSize, minorLevel) },
   };
 }
 

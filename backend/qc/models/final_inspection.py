@@ -155,10 +155,7 @@ class FinalInspection(models.Model):
             self.result = 'Pass'
 
     def save(self, *args, **kwargs):
-        if self.aql_standard == 'strict':
-            self.aql_critical, self.aql_major, self.aql_minor = 0.0, 1.5, 2.5
-        else:
-            self.aql_critical, self.aql_major, self.aql_minor = 0.0, 2.5, 4.0
+        self.aql_critical = 0.0  # Always enforce 0 critical allowed
 
         if not self.sample_size and self.presented_qty:
             self.sample_size = calculate_sample_size(self.presented_qty)

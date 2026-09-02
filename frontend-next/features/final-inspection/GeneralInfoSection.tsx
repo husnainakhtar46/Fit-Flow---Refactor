@@ -179,19 +179,42 @@ export const GeneralInfoSection: React.FC<GeneralInfoSectionProps> = ({
         </div>
 
         {/* AQL Level */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold">AQL Standard Level *</Label>
-          <select
-            {...register('aql_level')}
-            className="w-full px-3 py-2 border rounded-md text-sm bg-white font-medium"
-            required
-          >
-            <option value="1.0">AQL 1.0 (Strict)</option>
-            <option value="1.5">AQL 1.5</option>
-            <option value="2.5">AQL 2.5 (Industry Standard)</option>
-            <option value="4.0">AQL 4.0 (Normal)</option>
-            <option value="6.5">AQL 6.5 (Minor)</option>
-          </select>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Major AQL Limit *</Label>
+            <select
+              {...register('aql_major', {
+                onChange: (e) => {
+                  const val = e.target.value;
+                  if (val === '1.0' || val === '1.5') setValue('aql_minor', '2.5');
+                  else if (val === '2.5') setValue('aql_minor', '4.0');
+                  else if (val === '4.0' || val === '6.5') setValue('aql_minor', '6.5');
+                }
+              })}
+              className="w-full px-3 py-2 border rounded-md text-sm bg-white font-medium"
+              required
+            >
+              <option value="1.0">1.0 (Strict)</option>
+              <option value="1.5">1.5</option>
+              <option value="2.5">2.5 (Standard)</option>
+              <option value="4.0">4.0</option>
+              <option value="6.5">6.5</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold">Minor AQL Limit *</Label>
+            <select
+              {...register('aql_minor')}
+              className="w-full px-3 py-2 border rounded-md text-sm bg-white font-medium"
+              required
+            >
+              <option value="1.0">1.0</option>
+              <option value="1.5">1.5</option>
+              <option value="2.5">2.5</option>
+              <option value="4.0">4.0 (Standard)</option>
+              <option value="6.5">6.5</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>

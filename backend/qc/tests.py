@@ -197,7 +197,8 @@ class FinalInspectionResultTests(TestCase):
             order_no="TEST-006",
             style_no="STYLE-006",
             sample_size=50,
-            aql_standard='strict',
+            aql_major=1.5,
+            aql_minor=2.5,
             critical_found=0,
             major_found=2,  # Would pass standard (limit=2) but fail strict (limit=1)
             minor_found=0

@@ -59,11 +59,12 @@ export function useFinalInspection() {
   });
 
   const orderQty = Number(watch('order_quantity')) || 0;
-  const aqlLevel = watch('aql_level') || '2.5';
+  const aqlMajor = watch('aql_major') || '2.5';
+  const aqlMinor = watch('aql_minor') || '4.0';
 
   const aqlCalculations = useMemo(() => {
     const { sampleSize, codeLetter } = calculateSampleSize(orderQty);
-    const limits = calculateDefectLimits(sampleSize, aqlLevel);
+    const limits = calculateDefectLimits(sampleSize, aqlMajor, aqlMinor);
 
     const totalCritical = defects.filter((d) => d.type === 'critical').reduce((s, d) => s + d.count, 0);
     const totalMajor = defects.filter((d) => d.type === 'major').reduce((s, d) => s + d.count, 0);
@@ -79,7 +80,7 @@ export function useFinalInspection() {
     );
 
     return { sampleSize, codeLetter, limits, totalCritical, totalMajor, totalMinor, verdict };
-  }, [orderQty, aqlLevel, defects]);
+  }, [orderQty, aqlMajor, aqlMinor, defects]);
 
   useEffect(() => {
     setValue('sample_size', aqlCalculations.sampleSize);
