@@ -17,7 +17,8 @@ export type Measurement = {
 
 export type AccessoryItem = {
   name: string;
-  comment: string;
+  status?: string;
+  comment?: string;
 };
 
 export const ACCESSORY_PRESETS = [

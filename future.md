@@ -14,6 +14,10 @@ This document tracks agreed-upon technical debt, deferred structural decisions, 
 *   **Current State**: JWT tokens (`access_token`, `refresh_token`) are stored in `localStorage` in the frontend (Next.js). This exposes the application to Cross-Site Scripting (XSS) attacks. Because the backend is a stateless DRF API expecting a Bearer token, Django's default CSRF middleware is bypassed.
 *   **Future Task**: Transition to `HttpOnly` and `Secure` cookies for token storage to mitigate XSS. Once tokens are in cookies, implement robust CSRF protection (e.g., passing a CSRF token in headers for mutations) on both the Next.js and Django sides.
 
+### 3. Unified Measurement Architecture (`spec` vs `std`)
+*   **Current State**: Sample Evaluation uses `Measurement` (`std`, `tol`), while Final Inspection uses `FinalInspectionMeasurement` (`spec`, `tol`). Serializers and frontend forms have translation code to normalize them.
+*   **Future Task**: Consolidate into a unified measurement schema with consistent field naming (`std` or `spec`) across both evaluation and final inspection modules.
+
 ---
 
 ## Part 2: Recommended Product Features

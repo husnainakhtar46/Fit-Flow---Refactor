@@ -232,35 +232,34 @@ def generate_pdf_buffer(inspection):
         p.rect(50, y_pos - 15, 500, 15, fill=1)
         p.setFillColorRGB(0, 0, 0)
         p.drawString(55, y_pos - 12, "Item")
-        p.drawString(250, y_pos - 12, "Remarks")
+        p.drawString(200, y_pos - 12, "Status")
+        p.drawString(280, y_pos - 12, "Remarks")
         y_pos -= 15
 
         p.setFont("Helvetica", 9)
+        colors = {'Not Ok': (1, 0, 0), 'Available': (1, 0.5, 0), 'Ok': (0, 0.5, 0), 'Improved': (0, 0.5, 0)}
         for acc in accessories_data:
             if y_pos < 50:
                 p.showPage()
                 y_pos = height - 50
 
             p.rect(50, y_pos - 15, 500, 15)
-            p.drawString(55, y_pos - 12, str(acc.get('name', ''))[:30])
+            p.drawString(55, y_pos - 12, str(acc.get('name', ''))[:22])
 
-            comment = str(acc.get('comment', ''))
-            if comment == 'Not Ok':
-                p.setFillColorRGB(1, 0, 0)
-                p.setFont("Helvetica-Bold", 9)
-            elif comment == 'Available':
-                p.setFillColorRGB(1, 0.5, 0)
-                p.setFont("Helvetica-Bold", 9)
-            elif comment in ['Ok', 'Improved']:
-                p.setFillColorRGB(0, 0.5, 0)
-                p.setFont("Helvetica", 9)
-            else:
-                p.setFillColorRGB(0, 0, 0)
-                p.setFont("Helvetica", 9)
+            status = str(acc.get('status') or '')
+            comment = str(acc.get('comment') or '')
+            if not status and comment in colors:
+                status, comment = comment, ''
+            elif not status:
+                status = 'Ok'
 
-            p.drawString(250, y_pos - 12, comment[:65])
+            r, g, b = colors.get(status, (0, 0, 0))
+            p.setFillColorRGB(r, g, b)
+            p.setFont("Helvetica-Bold" if status in colors else "Helvetica", 9)
+            p.drawString(200, y_pos - 12, status)
             p.setFillColorRGB(0, 0, 0)
             p.setFont("Helvetica", 9)
+            p.drawString(280, y_pos - 12, comment[:55])
             y_pos -= 15
 
         y_pos -= 10

@@ -133,17 +133,40 @@ export const EvaluationPDFReport = ({ data, images }: EvaluationPDFReportProps) 
             <Text style={styles.bold}>Accessories Checklist:</Text>
             <View style={styles.accTable}>
               <View style={styles.accHeaderRow}>
-                <Text style={[styles.accHeaderCell, { width: '40%' }]}>Item</Text>
-                <Text style={[styles.accHeaderCell, { width: '60%', borderRightWidth: 0 }]}>
+                <Text style={[styles.accHeaderCell, { width: '35%' }]}>Item</Text>
+                <Text style={[styles.accHeaderCell, { width: '25%' }]}>Status</Text>
+                <Text style={[styles.accHeaderCell, { width: '40%', borderRightWidth: 0 }]}>
                   Remarks
                 </Text>
               </View>
               {data.accessories_data.map((acc: any, i: number) => {
                 const isLast = i === data.accessories_data.length - 1;
+                const status =
+                  acc.status ||
+                  (['Ok', 'Not Ok', 'Available', 'Improved'].includes(acc.comment || '')
+                    ? acc.comment
+                    : 'Ok');
+                const remarks =
+                  acc.status !== undefined
+                    ? acc.comment || '-'
+                    : (['Ok', 'Not Ok', 'Available', 'Improved'].includes(acc.comment || '')
+                        ? '-'
+                        : acc.comment || '-');
+
+                const statusStyle =
+                  status === 'Not Ok'
+                    ? styles.red
+                    : status === 'Available'
+                    ? styles.orange
+                    : styles.green;
+
                 return (
                   <View key={i} style={isLast ? styles.accRowLast : styles.accRow}>
-                    <Text style={[styles.accCell, { width: '40%' }]}>{acc.name}</Text>
-                    <Text style={[styles.accCellLast, { width: '60%' }]}>{acc.comment || '-'}</Text>
+                    <Text style={[styles.accCell, { width: '35%' }]}>{acc.name}</Text>
+                    <Text style={[styles.accCell, statusStyle, styles.bold, { width: '25%' }]}>
+                      {status}
+                    </Text>
+                    <Text style={[styles.accCellLast, { width: '40%' }]}>{remarks}</Text>
                   </View>
                 );
               })}

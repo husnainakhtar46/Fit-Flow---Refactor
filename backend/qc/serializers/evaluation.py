@@ -54,16 +54,25 @@ class InspectionImageSerializer(serializers.ModelSerializer):
 class InspectionListSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     factory_name = serializers.CharField(source='factory.name', read_only=True)
+    style_master_name = serializers.CharField(source='style_master.style_name', read_only=True)
+    style_name = serializers.SerializerMethodField()
+    order_no = serializers.CharField(source='po_number', read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
 
     class Meta:
         model = Inspection
         fields = [
-            "id", "style", "color", "po_number", "factory", "factory_name", "stage", "template", "customer", "customer_name",
+            "id", "style", "style_name", "style_master", "style_master_name", "color", "po_number", "order_no",
+            "factory", "factory_name", "stage", "template", "customer", "customer_name",
             "remarks", "decision", "created_at", "updated_at", "created_by_username",
             "customer_decision", "customer_feedback_comments", "customer_feedback_date",
-            "is_draft"
+            "is_draft", "is_deleted", "deleted_at"
         ]
+
+    def get_style_name(self, obj):
+        if obj.style_master:
+            return obj.style_master.style_name
+        return obj.style
 
 
 class InspectionCopySerializer(serializers.ModelSerializer):
@@ -95,6 +104,8 @@ class InspectionCopySerializer(serializers.ModelSerializer):
 
 class InspectionSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
+    factory_name = serializers.CharField(source='factory.name', read_only=True)
+    style_master_name = serializers.CharField(source='style_master.style_name', read_only=True)
     measurements = MeasurementSerializer(many=True, required=False, default=list)
     images = InspectionImageSerializer(many=True, read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
@@ -106,7 +117,8 @@ class InspectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Inspection
         fields = [
-            "id", "style", "color", "po_number", "factory", "stage", "template", "customer", "customer_name",
+            "id", "style", "style_master", "style_master_name", "color", "po_number", "factory", "factory_name",
+            "stage", "template", "customer", "customer_name",
             # Customer Comments by Category
             "customer_remarks", "customer_fit_comments", "customer_workmanship_comments",
             "customer_wash_comments", "customer_fabric_comments", "customer_accessories_comments",
@@ -122,11 +134,15 @@ class InspectionSerializer(serializers.ModelSerializer):
             "remarks", "decision", "created_at", "updated_at", "measurements", "images",
             "created_by_username",
             "customer_decision", "customer_feedback_comments", "customer_feedback_date",
-            "is_draft"
+            "is_draft", "is_deleted", "deleted_at"
         ]
 
     def to_internal_value(self, data):
         mutable_data = data.copy() if hasattr(data, 'copy') else dict(data)
+
+        # Handle po_number / order_no aliases
+        if 'order_no' in mutable_data and not mutable_data.get('po_number'):
+            mutable_data['po_number'] = mutable_data.pop('order_no')
 
         # Clean template
         tmpl = mutable_data.get('template')
@@ -165,6 +181,24 @@ class InspectionSerializer(serializers.ModelSerializer):
                 if not obj:
                     obj = Factory.objects.create(name=fact)
                 mutable_data['factory'] = obj.pk
+
+        # Clean style_master (UUID or resolve from name)
+        sm = mutable_data.get('style_master')
+        if sm == '' or sm == 'null':
+            mutable_data['style_master'] = None
+        elif isinstance(sm, str):
+            import uuid
+            try:
+                uuid.UUID(sm)
+            except ValueError:
+                from qc.models import StyleMaster
+                matched_sm = StyleMaster.objects.filter(style_name__iexact=sm).first()
+                mutable_data['style_master'] = matched_sm.pk if matched_sm else None
+        elif not sm and mutable_data.get('style'):
+            from qc.models import StyleMaster
+            matched_sm = StyleMaster.objects.filter(style_name__iexact=mutable_data.get('style')).first()
+            if matched_sm:
+                mutable_data['style_master'] = matched_sm.pk
 
         return super().to_internal_value(mutable_data)
 

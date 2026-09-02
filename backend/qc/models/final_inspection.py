@@ -93,6 +93,7 @@ class FinalInspection(models.Model):
     customer = models.ForeignKey(Customer, null=True, blank=True, on_delete=models.SET_NULL, related_name='final_inspections')
     supplier = models.CharField(max_length=255, blank=True)
     factory = models.ForeignKey(Factory, null=True, blank=True, on_delete=models.SET_NULL, related_name='final_inspections')
+    style_master = models.ForeignKey('qc.StyleMaster', null=True, blank=True, on_delete=models.SET_NULL, related_name='final_inspections')
     inspection_date = models.DateField()
     order_no = models.CharField(max_length=255)
     style_no = models.CharField(max_length=255)
@@ -134,6 +135,8 @@ class FinalInspection(models.Model):
 
     remarks = models.TextField(blank=True)
     is_draft = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -154,6 +157,17 @@ class FinalInspection(models.Model):
         else:
             self.result = 'Pass'
 
+    def soft_delete(self):
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
+    def restore(self):
+        self.is_deleted = False
+        self.deleted_at = None
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
     def save(self, *args, **kwargs):
         self.aql_critical = 0.0  # Always enforce 0 critical allowed
 
@@ -171,6 +185,13 @@ class FinalInspection(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['order_no']),
+            models.Index(fields=['result']),
+            models.Index(fields=['inspection_date']),
+            models.Index(fields=['is_deleted']),
+        ]
 
 
 class FinalInspectionDefect(models.Model):

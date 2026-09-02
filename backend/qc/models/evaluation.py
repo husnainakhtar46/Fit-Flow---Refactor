@@ -24,6 +24,7 @@ class Inspection(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    style_master = models.ForeignKey('qc.StyleMaster', null=True, blank=True, on_delete=models.SET_NULL, related_name='evaluations')
     style = models.CharField(max_length=255, blank=True, default="")
     color = models.CharField(max_length=255, blank=True)
     po_number = models.CharField(max_length=255, blank=True)
@@ -67,10 +68,33 @@ class Inspection(models.Model):
 
     decision = models.CharField(max_length=20, choices=DECISION_CHOICES, null=True, blank=True)
     is_draft = models.BooleanField(default=False, help_text="True if this inspection is a draft (incomplete, not finalized)")
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['-created_at']),
+            models.Index(fields=['po_number']),
+            models.Index(fields=['stage']),
+            models.Index(fields=['decision']),
+            models.Index(fields=['is_deleted']),
+        ]
+
+    def soft_delete(self):
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=['is_deleted', 'deleted_at'])
+
+    def restore(self):
+        self.is_deleted = False
+        self.deleted_at = None
+        self.save(update_fields=['is_deleted', 'deleted_at'])
 
     def __str__(self):
         return f"{self.style} - {self.color} ({self.created_at.date()})"

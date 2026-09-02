@@ -36,7 +36,15 @@ class FinalInspectionViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
 
     def get_queryset(self):
-        queryset = FinalInspection.objects.select_related('customer', 'created_by').order_by('-created_at')
+        queryset = FinalInspection.objects.select_related('customer', 'factory', 'style_master', 'created_by').order_by('-created_at')
+
+        user = getattr(self.request, 'user', None)
+        user_type = getattr(getattr(user, 'profile', None), 'user_type', None)
+        is_admin_or_head = user_type in ['admin', 'quality_head'] or getattr(user, 'is_staff', False)
+        include_deleted = self.request.query_params.get('include_deleted', '').lower() == 'true'
+
+        if not (is_admin_or_head and include_deleted):
+            queryset = queryset.filter(is_deleted=False)
 
         if self.action in ['retrieve', 'update', 'partial_update', 'pdf']:
             queryset = queryset.prefetch_related('defects', 'size_checks', 'images', 'measurements__samples')
@@ -45,6 +53,23 @@ class FinalInspectionViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(is_draft=False)
 
         return queryset
+
+    def perform_destroy(self, instance):
+        user = getattr(self.request, 'user', None)
+        user_type = getattr(getattr(user, 'profile', None), 'user_type', None)
+        is_admin_or_head = user_type in ['admin', 'quality_head'] or getattr(user, 'is_staff', False)
+        hard = self.request.query_params.get('hard', '').lower() == 'true' or instance.is_deleted
+
+        if is_admin_or_head and hard:
+            instance.delete()
+        else:
+            instance.soft_delete()
+
+    @action(detail=True, methods=['post'])
+    def restore(self, request, pk=None):
+        final_inspection = self.get_object()
+        final_inspection.restore()
+        return Response({"status": "restored", "id": str(final_inspection.id)})
 
     def get_serializer_class(self):
         if self.action == 'list':

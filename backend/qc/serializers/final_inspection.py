@@ -40,9 +40,9 @@ class FinalInspectionMeasurementSerializer(serializers.ModelSerializer):
             mutable_data['pom_name'] = 'Unspecified'
         if 'std' in mutable_data and ('spec' not in mutable_data or mutable_data.get('spec') is None or mutable_data.get('spec') == ''):
             mutable_data['spec'] = mutable_data.pop('std')
-        if mutable_data.get('spec') == '' or mutable_data.get('spec') == 'null' or mutable_data.get('spec') is None:
+        if not mutable_data.get('spec') or mutable_data.get('spec') == 'null':
             mutable_data['spec'] = 0.0
-        if mutable_data.get('tol') == '' or mutable_data.get('tol') == 'null' or mutable_data.get('tol') is None:
+        if not mutable_data.get('tol') or mutable_data.get('tol') == 'null':
             mutable_data['tol'] = 0.0
         return super().to_internal_value(mutable_data)
 
@@ -120,16 +120,25 @@ class FinalInspectionImageSerializer(serializers.ModelSerializer):
 class FinalInspectionListSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     factory_name = serializers.CharField(source='factory.name', read_only=True)
+    style_master_name = serializers.CharField(source='style_master.style_name', read_only=True)
+    style = serializers.SerializerMethodField()
+    po_number = serializers.CharField(source='order_no', read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
 
     class Meta:
         model = FinalInspection
         fields = [
-            'id', 'order_no', 'style_no', 'color', 'inspection_attempt', 'customer', 'customer_name',
+            'id', 'order_no', 'po_number', 'style_no', 'style', 'style_master', 'style_master_name',
+            'color', 'inspection_attempt', 'customer', 'customer_name',
             'factory', 'factory_name', 'supplier',
             'inspection_date', 'result', 'total_order_qty', 'sample_size',
-            'created_at', 'updated_at', 'created_by_username', 'is_draft'
+            'created_at', 'updated_at', 'created_by_username', 'is_draft', 'is_deleted', 'deleted_at'
         ]
+
+    def get_style(self, obj):
+        if obj.style_master:
+            return obj.style_master.style_name
+        return obj.style_no
 
 
 class FinalInspectionSerializer(serializers.ModelSerializer):
@@ -139,6 +148,10 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
     images = FinalInspectionImageSerializer(many=True, read_only=True)
     created_by_username = serializers.CharField(source='created_by.username', read_only=True)
     customer_name = serializers.CharField(source='customer.name', read_only=True)
+    factory_name = serializers.CharField(source='factory.name', read_only=True)
+    style_master_name = serializers.CharField(source='style_master.style_name', read_only=True)
+    style = serializers.SerializerMethodField()
+    po_number = serializers.CharField(source='order_no', read_only=True)
 
     max_allowed_critical = serializers.ReadOnlyField()
     max_allowed_major = serializers.ReadOnlyField()
@@ -152,8 +165,9 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = FinalInspection
         fields = [
-            'id', 'customer', 'customer_name', 'supplier', 'factory',
-            'inspection_date', 'order_no', 'style_no', 'color', 'inspection_attempt',
+            'id', 'customer', 'customer_name', 'supplier', 'factory', 'factory_name',
+            'style_master', 'style_master_name', 'inspection_date',
+            'order_no', 'po_number', 'style_no', 'style', 'color', 'inspection_attempt',
             'total_order_qty', 'presented_qty', 'sample_size',
             'aql_standard', 'aql_critical', 'aql_major', 'aql_minor',
             'critical_found', 'major_found', 'minor_found',
@@ -164,8 +178,14 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
             'quantity_check', 'workmanship', 'packing_method',
             'marking_label', 'data_measurement', 'hand_feel',
             'remarks', 'created_at', 'updated_at', 'created_by', 'created_by_username',
-            'defects', 'size_checks', 'images', 'measurements', 'is_draft'
+            'defects', 'size_checks', 'images', 'measurements', 'is_draft',
+            'is_deleted', 'deleted_at'
         ]
+
+    def get_style(self, obj):
+        if obj.style_master:
+            return obj.style_master.style_name
+        return obj.style_no
 
     def to_internal_value(self, data):
         from django.utils import timezone
@@ -213,6 +233,24 @@ class FinalInspectionSerializer(serializers.ModelSerializer):
                 if not obj:
                     obj = Factory.objects.create(name=fact)
                 mutable_data['factory'] = obj.pk
+
+        # Clean style_master (UUID or resolve from name)
+        sm = mutable_data.get('style_master')
+        if sm == '' or sm == 'null':
+            mutable_data['style_master'] = None
+        elif isinstance(sm, str):
+            import uuid
+            try:
+                uuid.UUID(sm)
+            except ValueError:
+                from qc.models import StyleMaster
+                matched_sm = StyleMaster.objects.filter(style_name__iexact=sm).first()
+                mutable_data['style_master'] = matched_sm.pk if matched_sm else None
+        elif not sm and mutable_data.get('style_no'):
+            from qc.models import StyleMaster
+            matched_sm = StyleMaster.objects.filter(style_name__iexact=mutable_data.get('style_no')).first()
+            if matched_sm:
+                mutable_data['style_master'] = matched_sm.pk
 
         return super().to_internal_value(mutable_data)
 

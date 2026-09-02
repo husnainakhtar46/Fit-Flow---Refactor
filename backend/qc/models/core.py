@@ -63,6 +63,9 @@ class CustomerEmail(models.Model):
     email = models.EmailField()
     email_type = models.CharField(max_length=2, choices=EMAIL_TYPE_CHOICES, default='to')
 
+    class Meta:
+        unique_together = ('customer', 'email')
+
     def __str__(self):
         if self.contact_name:
             return f"{self.contact_name} <{self.email}> [{self.get_email_type_display()}] ({self.customer.name})"

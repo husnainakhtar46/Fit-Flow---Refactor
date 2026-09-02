@@ -1,0 +1,98 @@
+from datetime import date
+from django.test import TestCase
+from django.db import IntegrityError
+from django.contrib.auth import get_user_model
+from qc.models import (
+    Customer,
+    CustomerEmail,
+    Inspection,
+    FinalInspection,
+    StyleMaster,
+)
+from qc.serializers import InspectionSerializer, FinalInspectionSerializer
+
+User = get_user_model()
+
+
+class SchemaHardeningTests(TestCase):
+    """Tests for CustomerEmail uniqueness, soft delete, and StyleMaster linking."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username="testqc", password="password")
+        self.customer = Customer.objects.create(name="Zara Global")
+
+    def test_customer_email_uniqueness(self):
+        """CustomerEmail must enforce unique_together on customer and email."""
+        CustomerEmail.objects.create(
+            customer=self.customer,
+            email="qc@zara.com",
+            contact_name="Lead QA"
+        )
+        with self.assertRaises(IntegrityError):
+            CustomerEmail.objects.create(
+                customer=self.customer,
+                email="qc@zara.com",
+                contact_name="Duplicate QA"
+            )
+
+    def test_inspection_soft_delete_and_restore(self):
+        """Inspection soft_delete sets is_deleted and deleted_at; restore clears them."""
+        inspection = Inspection.objects.create(
+            customer=self.customer,
+            style="Denim Jacket",
+            po_number="PO-991",
+            stage="Proto"
+        )
+        self.assertFalse(inspection.is_deleted)
+        self.assertIsNone(inspection.deleted_at)
+
+        inspection.soft_delete()
+        inspection.refresh_from_db()
+        self.assertTrue(inspection.is_deleted)
+        self.assertIsNotNone(inspection.deleted_at)
+
+        inspection.restore()
+        inspection.refresh_from_db()
+        self.assertFalse(inspection.is_deleted)
+        self.assertIsNone(inspection.deleted_at)
+
+    def test_final_inspection_soft_delete_and_restore(self):
+        """FinalInspection soft_delete sets is_deleted and deleted_at; restore clears them."""
+        fins = FinalInspection.objects.create(
+            customer=self.customer,
+            inspection_date=date.today(),
+            order_no="FIR-992",
+            style_no="STYLE-992",
+            sample_size=50
+        )
+        self.assertFalse(fins.is_deleted)
+        self.assertIsNone(fins.deleted_at)
+
+        fins.soft_delete()
+        fins.refresh_from_db()
+        self.assertTrue(fins.is_deleted)
+        self.assertIsNotNone(fins.deleted_at)
+
+        fins.restore()
+        fins.refresh_from_db()
+        self.assertFalse(fins.is_deleted)
+        self.assertIsNone(fins.deleted_at)
+
+    def test_style_master_serializer_linking(self):
+        """Serializers should automatically link to StyleMaster by style name."""
+        style = StyleMaster.objects.create(
+            style_name="Summer Dress",
+            po_number="PO-SD-101",
+            customer=self.customer
+        )
+
+        data = {
+            "customer": str(self.customer.id),
+            "style": "Summer Dress",
+            "po_number": "PO-SD-101",
+            "stage": "Proto",
+        }
+        serializer = InspectionSerializer(data=data)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        instance = serializer.save()
+        self.assertEqual(instance.style_master_id, style.id)

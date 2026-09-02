@@ -31,7 +31,16 @@ class InspectionViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
 
     def get_queryset(self):
-        queryset = Inspection.objects.select_related('customer', 'template', 'created_by').order_by("-created_at")
+        queryset = Inspection.objects.select_related('customer', 'template', 'created_by', 'factory', 'style_master').order_by("-created_at")
+
+        user = getattr(self.request, 'user', None)
+        user_type = getattr(getattr(user, 'profile', None), 'user_type', None)
+        is_admin_or_head = user_type in ['admin', 'quality_head'] or getattr(user, 'is_staff', False)
+        include_deleted = self.request.query_params.get('include_deleted', '').lower() == 'true'
+
+        if not (is_admin_or_head and include_deleted):
+            queryset = queryset.filter(is_deleted=False)
+
         if self.action == 'list':
             queryset = queryset.filter(is_draft=False)
         if self.action != 'list' or self.action == 'retrieve':
@@ -40,6 +49,23 @@ class InspectionViewSet(viewsets.ModelViewSet):
                 Prefetch('images', queryset=InspectionImage.objects.only('id', 'caption'))
             )
         return queryset
+
+    def perform_destroy(self, instance):
+        user = getattr(self.request, 'user', None)
+        user_type = getattr(getattr(user, 'profile', None), 'user_type', None)
+        is_admin_or_head = user_type in ['admin', 'quality_head'] or getattr(user, 'is_staff', False)
+        hard = self.request.query_params.get('hard', '').lower() == 'true' or instance.is_deleted
+
+        if is_admin_or_head and hard:
+            instance.delete()
+        else:
+            instance.soft_delete()
+
+    @action(detail=True, methods=["post"])
+    def restore(self, request, pk=None):
+        inspection = self.get_object()
+        inspection.restore()
+        return Response({"status": "restored", "id": str(inspection.id)})
 
     def get_serializer_class(self):
         if self.action == 'list':

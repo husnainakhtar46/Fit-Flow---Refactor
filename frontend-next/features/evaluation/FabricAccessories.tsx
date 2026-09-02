@@ -24,13 +24,13 @@ export const FabricAccessories: React.FC<FabricAccessoriesProps> = ({
 
   const handleAddPreset = (presetName: string) => {
     if (!accessories.some((a) => a.name.toLowerCase() === presetName.toLowerCase())) {
-      setAccessories([...accessories, { name: presetName, comment: 'Ok' }]);
+      setAccessories([...accessories, { name: presetName, status: 'Ok', comment: '' }]);
     }
   };
 
   const handleAddCustom = () => {
     if (customName.trim()) {
-      setAccessories([...accessories, { name: customName.trim(), comment: 'Ok' }]);
+      setAccessories([...accessories, { name: customName.trim(), status: 'Ok', comment: '' }]);
       setCustomName('');
     }
   };
@@ -39,9 +39,15 @@ export const FabricAccessories: React.FC<FabricAccessoriesProps> = ({
     setAccessories(accessories.filter((_, i) => i !== index));
   };
 
+  const handleStatusChange = (index: number, status: string) => {
+    const updated = [...accessories];
+    updated[index] = { ...updated[index], status };
+    setAccessories(updated);
+  };
+
   const handleCommentChange = (index: number, comment: string) => {
     const updated = [...accessories];
-    updated[index].comment = comment;
+    updated[index] = { ...updated[index], comment };
     setAccessories(updated);
   };
 
@@ -136,38 +142,58 @@ export const FabricAccessories: React.FC<FabricAccessoriesProps> = ({
         {/* Accessories Table */}
         {accessories.length > 0 ? (
           <div className="border rounded-md divide-y bg-white">
-            {accessories.map((item, index) => (
-              <div key={index} className="flex items-center gap-3 p-2.5 hover:bg-gray-50">
-                <span className="font-medium text-xs text-gray-800 min-w-[140px]">
-                  {item.name}
-                </span>
-                <select
-                  value={item.comment}
-                  onChange={(e) => handleCommentChange(index, e.target.value)}
-                  className="px-2 py-1 border border-gray-300 rounded text-xs bg-white focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="Ok">Ok</option>
-                  <option value="Not Ok">Not Ok</option>
-                  <option value="Available">Available</option>
-                  <option value="Improved">Improved</option>
-                </select>
-                <Input
-                  value={item.comment}
-                  onChange={(e) => handleCommentChange(index, e.target.value)}
-                  placeholder="Additional remarks..."
-                  className="h-8 text-xs flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleRemove(index)}
-                  className="h-7 w-7 text-gray-400 hover:text-red-600"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-            ))}
+            {accessories.map((item, index) => {
+              const currentStatus =
+                item.status ||
+                (['Ok', 'Not Ok', 'Available', 'Improved'].includes(item.comment || '')
+                  ? item.comment!
+                  : 'Ok');
+              const currentComment =
+                item.status !== undefined
+                  ? item.comment || ''
+                  : (['Ok', 'Not Ok', 'Available', 'Improved'].includes(item.comment || '')
+                      ? ''
+                      : item.comment || '');
+
+              return (
+                <div key={index} className="flex items-center gap-3 p-2.5 hover:bg-gray-50">
+                  <span className="font-medium text-xs text-gray-800 min-w-[140px]">
+                    {item.name}
+                  </span>
+                  <select
+                    value={currentStatus}
+                    onChange={(e) => handleStatusChange(index, e.target.value)}
+                    className={`px-2 py-1 border rounded text-xs bg-white focus:ring-1 focus:ring-blue-500 font-medium ${
+                      currentStatus === 'Not Ok'
+                        ? 'border-red-300 text-red-700 bg-red-50/50'
+                        : currentStatus === 'Available'
+                        ? 'border-amber-300 text-amber-700 bg-amber-50/50'
+                        : 'border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    <option value="Ok">Ok</option>
+                    <option value="Not Ok">Not Ok</option>
+                    <option value="Available">Available</option>
+                    <option value="Improved">Improved</option>
+                  </select>
+                  <Input
+                    value={currentComment}
+                    onChange={(e) => handleCommentChange(index, e.target.value)}
+                    placeholder="Additional remarks..."
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemove(index)}
+                    className="h-7 w-7 text-gray-400 hover:text-red-600"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs text-gray-400 italic">No accessories added yet.</p>
