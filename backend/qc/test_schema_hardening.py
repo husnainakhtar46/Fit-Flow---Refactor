@@ -96,3 +96,26 @@ class SchemaHardeningTests(TestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         instance = serializer.save()
         self.assertEqual(instance.style_master_id, style.id)
+
+    def test_inspection_delete_image_action(self):
+        """InspectionViewSet delete_image action removes image from inspection."""
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from qc.models import InspectionImage
+        from rest_framework.test import APIClient
+
+        inspection = Inspection.objects.create(
+            customer=self.customer,
+            style="Shirt",
+            po_number="PO-102",
+            stage="Proto",
+            created_by=self.user,
+        )
+        fake_image = SimpleUploadedFile("test.jpg", b"fake image bytes", content_type="image/jpeg")
+        img = InspectionImage.objects.create(inspection=inspection, image=fake_image, caption="Detail View")
+
+        client = APIClient()
+        client.force_authenticate(user=self.user)
+        res = client.post(f"/api/inspections/{inspection.id}/delete_image/", {"image_id": str(img.id)}, format="json")
+        self.assertEqual(res.status_code, 200)
+        self.assertFalse(InspectionImage.objects.filter(id=img.id).exists())
+

@@ -12,6 +12,7 @@ import { compressImage } from '@/lib/imageUtils';
 import { EvaluationPDFReport } from '@/components/pdf/EvaluationPDFReport';
 import { ImageSlot, AccessoryItem, INITIAL_FORM_STATE } from './types';
 import { useEvaluationDrafts } from './useEvaluationDrafts';
+import { useEvaluationImages } from './useEvaluationImages';
 
 export function useEvaluationForm() {
   const queryClient = useQueryClient();
@@ -21,12 +22,17 @@ export function useEvaluationForm() {
   const [accessories, setAccessories] = useState<AccessoryItem[]>([]);
   const [page, setPage] = useState(1);
 
-  const [imageSlots, setImageSlots] = useState<ImageSlot[]>([
-    { file: null, caption: 'Front View' },
-    { file: null, caption: 'Back View' },
-    { file: null, caption: 'Wash Label' },
-    { file: null, caption: 'Detail View' },
-  ]);
+  const {
+    imageSlots,
+    setImageSlots,
+    addSlot,
+    removeSlot,
+    updateSlot,
+    validateMandatoryPhotos,
+    uploadAllImages,
+    loadExistingImages,
+    resetImageSlots,
+  } = useEvaluationImages();
 
   const [filters, setFilters] = useState({
     dateFrom: '',
@@ -91,21 +97,14 @@ export function useEvaluationForm() {
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await api.post('/inspections/', data);
-      for (const slot of imageSlots) {
-        if (slot.file instanceof File) {
-          const compressed = await compressImage(slot.file);
-          const fd = new FormData();
-          fd.append('image', compressed);
-          fd.append('caption', slot.caption);
-          await api.post(`/inspections/${res.data.id}/upload_image/`, fd);
-        }
-      }
+      await uploadAllImages(res.data.id);
       return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inspections'] });
       queryClient.invalidateQueries({ queryKey: ['inspection-drafts'] });
       draftsManager.clearDraft();
+      resetImageSlots();
       setIsOpen(false);
       reset(INITIAL_FORM_STATE);
       toast.success('Inspection created successfully');
@@ -118,21 +117,14 @@ export function useEvaluationForm() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
       const res = await api.patch(`/inspections/${id}/`, data);
-      for (const slot of imageSlots) {
-        if (slot.file instanceof File) {
-          const compressed = await compressImage(slot.file);
-          const fd = new FormData();
-          fd.append('image', compressed);
-          fd.append('caption', slot.caption);
-          await api.post(`/inspections/${id}/upload_image/`, fd);
-        }
-      }
+      await uploadAllImages(id);
       return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inspections'] });
       queryClient.invalidateQueries({ queryKey: ['inspection-drafts'] });
       draftsManager.clearDraft();
+      resetImageSlots();
       setIsOpen(false);
       setEditingId(null);
       reset(INITIAL_FORM_STATE);
@@ -173,12 +165,18 @@ export function useEvaluationForm() {
   };
 
   const handleFormSubmit = async (data: any) => {
+    const validation = validateMandatoryPhotos();
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+
     const payload = { ...data, is_draft: false, accessories_data: accessories };
     if (!navigator.onLine) {
       try {
         const imagePayload = imageSlots.filter((s) => s.file instanceof File).map((s) => ({
           file: s.file as Blob,
-          caption: s.caption,
+          caption: s.caption || 'Detail View',
           category: 'general',
         }));
         await db.inspections.add({
@@ -195,12 +193,12 @@ export function useEvaluationForm() {
             if (slot.file && typeof slot.file !== 'string') {
               try {
                 const base64 = await fileToBase64(slot.file as Blob);
-                return { file: base64, caption: slot.caption };
+                return { file: base64, caption: slot.caption || 'Detail View' };
               } catch {
-                return { file: null, caption: slot.caption };
+                return { file: null, caption: slot.caption || 'Detail View' };
               }
             }
-            return { file: typeof slot.file === 'string' ? slot.file : null, caption: slot.caption };
+            return { file: typeof slot.file === 'string' ? slot.file : null, caption: slot.caption || 'Detail View' };
           })
         );
 
@@ -212,6 +210,7 @@ export function useEvaluationForm() {
         await saveOfflinePdf(evalDoc, evalFilename);
 
         draftsManager.clearDraft();
+        resetImageSlots();
         setIsOpen(false);
         reset(INITIAL_FORM_STATE);
         return;
@@ -235,18 +234,7 @@ export function useEvaluationForm() {
       reset(full);
       if (full.accessories_data) setAccessories(full.accessories_data);
       if (full.measurements?.[0]?.samples?.length) setSampleCount(full.measurements[0].samples.length);
-      if (full.images && Array.isArray(full.images)) {
-        const loaded: ImageSlot[] = [
-          { file: null, caption: 'Front View' },
-          { file: null, caption: 'Back View' },
-          { file: null, caption: 'Wash Label' },
-          { file: null, caption: 'Detail View' },
-        ];
-        full.images.forEach((img: any, i: number) => {
-          if (i < 4) loaded[i] = { file: img.image, caption: img.caption || loaded[i].caption };
-        });
-        setImageSlots(loaded);
-      }
+      loadExistingImages(full.images || []);
       setIsOpen(true);
     } catch {
       toast.error('Failed to load inspection details');
@@ -268,12 +256,7 @@ export function useEvaluationForm() {
       reset({ ...formData, is_draft: false, measurements: cleanedMeasurements });
       if (full.accessories_data) setAccessories(full.accessories_data);
       if (cleanedMeasurements?.[0]?.samples?.length) setSampleCount(cleanedMeasurements[0].samples.length);
-      setImageSlots([
-        { file: null, caption: 'Front View' },
-        { file: null, caption: 'Back View' },
-        { file: null, caption: 'Wash Label' },
-        { file: null, caption: 'Detail View' },
-      ]);
+      resetImageSlots();
       setIsOpen(true);
       toast.success('Evaluation duplicated as new report');
     } catch {
@@ -318,6 +301,9 @@ export function useEvaluationForm() {
     setPage,
     imageSlots,
     setImageSlots,
+    addImageSlot: addSlot,
+    removeImageSlot: removeSlot,
+    updateImageSlot: updateSlot,
     filters,
     setFilters,
     factories,

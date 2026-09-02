@@ -13,32 +13,32 @@ interface FinalInspAnalyticsProps {
 }
 
 export const FinalInspAnalytics: React.FC<FinalInspAnalyticsProps> = ({ data }) => {
-  const fiPassMap = new Map<string, number>();
-  const fiFailMap = new Map<string, number>();
+  const monthlyData = new Map<string, { timestamp: number; label: string; pass: number; fail: number }>();
 
   data?.fi_monthly_pass?.forEach((item: any) => {
-    const key = new Date(item.month).toLocaleDateString('en-US', {
-      month: 'short',
-      year: '2-digit',
-    });
-    fiPassMap.set(key, item.count);
+    const d = new Date(item.month);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    const current = monthlyData.get(key) || { timestamp: d.getTime(), label, pass: 0, fail: 0 };
+    current.pass = item.count;
+    monthlyData.set(key, current);
   });
 
   data?.fi_monthly_fail?.forEach((item: any) => {
-    const key = new Date(item.month).toLocaleDateString('en-US', {
-      month: 'short',
-      year: '2-digit',
-    });
-    fiFailMap.set(key, item.count);
+    const d = new Date(item.month);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    const current = monthlyData.get(key) || { timestamp: d.getTime(), label, pass: 0, fail: 0 };
+    current.fail = item.count;
+    monthlyData.set(key, current);
   });
 
-  const allMonths = new Set([...fiPassMap.keys(), ...fiFailMap.keys()]);
-  const fiTrendData = Array.from(allMonths)
-    .sort()
-    .map((month) => ({
-      name: month,
-      pass: fiPassMap.get(month) || 0,
-      fail: fiFailMap.get(month) || 0,
+  const fiTrendData = Array.from(monthlyData.values())
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((item) => ({
+      name: item.label,
+      pass: item.pass,
+      fail: item.fail,
     }));
 
   const fiCustomerData =

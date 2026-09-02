@@ -25,17 +25,28 @@ class InspectionFilter(django_filters.FilterSet):
         label='Stage'
     )
     
-    # Customer filter
+    # Customer & Style Master filters
     customer = django_filters.UUIDFilter(field_name='customer__id', label='Customer')
+    style_master = django_filters.UUIDFilter(field_name='style_master__id', label='Style Master')
     
-    # Factory filter (CharField storing UUID or Name)
-    factory = django_filters.CharFilter(field_name='factory', lookup_expr='exact', label='Factory')
+    # Factory filter supporting UUID or Name
+    factory = django_filters.CharFilter(method='filter_factory', label='Factory')
 
     # Text search across multiple fields
     search = django_filters.CharFilter(method='filter_search', label='Search')
     
+    def filter_factory(self, queryset, name, value):
+        if not value:
+            return queryset
+        import uuid
+        try:
+            uuid.UUID(str(value))
+            return queryset.filter(models.Q(factory_id=value) | models.Q(factory__name__iexact=value))
+        except ValueError:
+            return queryset.filter(factory__name__icontains=value)
+
     def filter_search(self, queryset, name, value):
-        """Search across style, po_number, customer name, and created_by username"""
+        """Search across style, po_number, customer name, created_by username, factory, and style master"""
         if not value:
             return queryset
         return queryset.filter(
@@ -43,12 +54,13 @@ class InspectionFilter(django_filters.FilterSet):
             models.Q(po_number__icontains=value) |
             models.Q(customer__name__icontains=value) |
             models.Q(created_by__username__icontains=value) |
-            models.Q(factory__icontains=value)
+            models.Q(factory__name__icontains=value) |
+            models.Q(style_master__style_name__icontains=value)
         )
     
     class Meta:
         model = Inspection
-        fields = ['decision', 'stage', 'customer', 'factory', 'created_at_after', 'created_at_before', 'search']
+        fields = ['decision', 'stage', 'customer', 'style_master', 'factory', 'created_at_after', 'created_at_before', 'search']
 
 
 class FinalInspectionFilter(django_filters.FilterSet):
@@ -56,10 +68,22 @@ class FinalInspectionFilter(django_filters.FilterSet):
     Filtering for Final Inspection model
     """
     customer = django_filters.UUIDFilter(field_name='customer__id', label='Customer')
+    style_master = django_filters.UUIDFilter(field_name='style_master__id', label='Style Master')
+    factory = django_filters.CharFilter(method='filter_factory', label='Factory')
     date_from = django_filters.DateFilter(field_name='inspection_date', lookup_expr='gte', label='From Date')
     date_to = django_filters.DateFilter(field_name='inspection_date', lookup_expr='lte', label='To Date')
     result = django_filters.ChoiceFilter(choices=[('Pending', 'Pending'), ('Pass', 'Pass'), ('Fail', 'Fail')], label='Result')
 
+    def filter_factory(self, queryset, name, value):
+        if not value:
+            return queryset
+        import uuid
+        try:
+            uuid.UUID(str(value))
+            return queryset.filter(models.Q(factory_id=value) | models.Q(factory__name__iexact=value))
+        except ValueError:
+            return queryset.filter(factory__name__icontains=value)
+
     class Meta:
         model = FinalInspection
-        fields = ['customer', 'result', 'date_from', 'date_to']
+        fields = ['customer', 'style_master', 'factory', 'result', 'date_from', 'date_to']

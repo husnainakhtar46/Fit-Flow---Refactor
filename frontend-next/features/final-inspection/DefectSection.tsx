@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FIDefect } from './types';
 import AQLResultCard from '@/components/inspection/AQLResultCard';
-import { compressImage, getFullImageUrl } from '@/lib/imageUtils';
+import { compressImage } from '@/lib/imageUtils';
+import BlobImagePreview from '@/components/shared/BlobImagePreview';
 
 interface DefectSectionProps {
   defects: FIDefect[];
@@ -230,9 +231,8 @@ export const DefectSection: React.FC<DefectSectionProps> = ({
                     <td className="p-2 text-center">
                       {d.photo ? (
                         <div className="relative inline-block group">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={typeof d.photo === 'string' ? getFullImageUrl(d.photo) : URL.createObjectURL(d.photo)}
+                          <BlobImagePreview
+                            file={d.photo}
                             alt="Defect"
                             className="w-7 h-7 object-cover rounded border border-gray-300 mx-auto"
                           />
@@ -318,9 +318,8 @@ export const DefectSection: React.FC<DefectSectionProps> = ({
                   <X className="w-3.5 h-3.5" />
                 </button>
                 <div className="h-24 bg-gray-50 rounded overflow-hidden flex items-center justify-center">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={img.file instanceof File ? URL.createObjectURL(img.file) : img.file}
+                  <BlobImagePreview
+                    file={img.file}
                     alt="Defect evidence"
                     className="w-full h-full object-cover"
                   />

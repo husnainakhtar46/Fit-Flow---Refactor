@@ -42,7 +42,13 @@ export function AQLResultCard({
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-bold">AQL Result Verification</CardTitle>
         <Badge
-          className={result === 'Pass' ? 'bg-green-600' : 'bg-red-600'}
+          className={
+            result === 'Pass'
+              ? 'bg-green-600 hover:bg-green-700'
+              : result === 'Pending'
+              ? 'bg-amber-500 hover:bg-amber-600 text-white'
+              : 'bg-red-600 hover:bg-red-700'
+          }
           style={{ fontSize: '1rem', padding: '0.4rem 1.2rem' }}
         >
           {result.toUpperCase()}

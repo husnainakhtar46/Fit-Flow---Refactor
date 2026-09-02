@@ -25,17 +25,10 @@ def generate_final_inspection_pdf(final_inspection):
     p.drawString(50, y_pos, "FINAL INSPECTION REPORT")
 
     result = final_inspection.result
+    badge_text = "PASS" if result == 'Pass' else "FAIL" if result == 'Fail' else "PENDING"
+    badge_color = (0, 0.6, 0) if result == 'Pass' else (1, 0, 0) if result == 'Fail' else (0.5, 0.5, 0.5)
     p.setFont("Helvetica-Bold", 18)
-    if result == 'Pass':
-        p.setFillColorRGB(0, 0.6, 0)
-        badge_text = "PASS"
-    elif result == 'Fail':
-        p.setFillColorRGB(1, 0, 0)
-        badge_text = "FAIL"
-    else:
-        p.setFillColorRGB(0.5, 0.5, 0.5)
-        badge_text = "PENDING"
-
+    p.setFillColorRGB(*badge_color)
     p.drawRightString(550, y_pos, f"RESULT: {badge_text}")
     p.setFillColorRGB(0, 0, 0)
     y_pos -= 40
@@ -45,11 +38,18 @@ def generate_final_inspection_pdf(final_inspection):
     p.drawString(50, y_pos, "1. General Information")
     y_pos -= 20
 
+    insp_date_str = (
+        final_inspection.inspection_date.strftime('%d-%b-%Y')
+        if final_inspection.inspection_date
+        else (final_inspection.created_at.strftime('%d-%b-%Y') if final_inspection.created_at else 'N/A')
+    )
+    cust_name = final_inspection.customer.name if final_inspection.customer else 'N/A'
+    factory_name = final_inspection.factory.name if final_inspection.factory else 'N/A'
     data = [
-        ["Customer:", final_inspection.customer.name if final_inspection.customer else 'N/A', "Inspection Date:", final_inspection.inspection_date.strftime('%d-%b-%Y')],
-        ["AQL Standard:", final_inspection.get_aql_standard_display() if hasattr(final_inspection, 'get_aql_standard_display') else final_inspection.aql_standard, "Order No:", final_inspection.order_no],
-        ["Factory:", final_inspection.factory, "Style No:", final_inspection.style_no],
-        ["Color:", final_inspection.color, "Inspection Attempt:", final_inspection.get_inspection_attempt_display() if hasattr(final_inspection, 'get_inspection_attempt_display') else final_inspection.inspection_attempt],
+        ["Customer:", cust_name, "Inspection Date:", insp_date_str],
+        ["AQL Standard:", getattr(final_inspection, 'get_aql_standard_display', lambda: final_inspection.aql_standard)(), "Order No:", final_inspection.order_no],
+        ["Factory:", factory_name, "Style No:", final_inspection.style_no],
+        ["Color:", final_inspection.color, "Inspection Attempt:", getattr(final_inspection, 'get_inspection_attempt_display', lambda: final_inspection.inspection_attempt)()],
     ]
 
     row_height = 20
@@ -216,7 +216,7 @@ def generate_final_inspection_pdf(final_inspection):
                         is_fail = False
                         if i > 2 and v != "-":
                             try:
-                                if abs(float(v) - m.spec) > m.tol:
+                                if abs(float(v) - m.spec) > (m.tol + 1e-5):
                                     is_fail = True
                             except Exception:
                                 pass

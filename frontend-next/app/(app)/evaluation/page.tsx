@@ -59,6 +59,9 @@ export default function EvaluationPage() {
         setAccessories={form.setAccessories}
         imageSlots={form.imageSlots}
         setImageSlots={form.setImageSlots}
+        addImageSlot={form.addImageSlot}
+        removeImageSlot={form.removeImageSlot}
+        updateImageSlot={form.updateImageSlot}
         factories={form.factories}
         customers={form.customers}
         templates={form.templates}

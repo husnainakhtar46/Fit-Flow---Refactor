@@ -17,7 +17,7 @@ from qc.serializers import (
     FinalInspectionImageSerializer,
 )
 from qc.permissions import CanEditFinalInspection
-from qc.services.pdf_generator import generate_final_inspection_pdf
+from qc.services.pdf.final_inspection_pdf import generate_final_inspection_pdf
 from qc.utils import process_and_compress_image
 
 

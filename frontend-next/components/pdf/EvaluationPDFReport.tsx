@@ -216,33 +216,46 @@ export const EvaluationPDFReport = ({ data, images }: EvaluationPDFReportProps) 
         )}
       </Page>
 
-      {/* Images Page (if any) */}
-      {images && images.length > 0 && (
-        <Page size="A4" style={styles.page}>
-          <Text style={styles.headerTitle}>INSPECTION IMAGES</Text>
-          <View
-            style={{
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              justifyContent: 'space-between',
-              marginTop: 15,
-            }}
-          >
-            {images.map((img: any, idx: number) => {
-              const src = typeof img.file === 'string' ? img.file : img.preview || img.image;
-              if (!src) return null;
-              return (
-                <View key={idx} style={{ width: '48%', marginBottom: 15 }}>
-                  <Image src={src} style={{ width: '100%', height: 180, objectFit: 'contain' }} />
-                  <Text style={{ fontSize: 9, textAlign: 'center', marginTop: 4 }}>
-                    {img.caption || `Image ${idx + 1}`}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        </Page>
-      )}
+      {/* Images Pages (4 per page in 2x2 grid) */}
+      {(() => {
+        const validImages = (images || []).filter(
+          (img: any) => Boolean(img.file || img.preview || img.image)
+        );
+        if (validImages.length === 0) return null;
+
+        const chunks: any[][] = [];
+        for (let i = 0; i < validImages.length; i += 4) {
+          chunks.push(validImages.slice(i, i + 4));
+        }
+
+        return chunks.map((chunk, pageIdx) => (
+          <Page key={`img-page-${pageIdx}`} size="A4" style={styles.page}>
+            <Text style={styles.headerTitle}>
+              {pageIdx === 0 ? 'INSPECTION IMAGES' : 'INSPECTION IMAGES (Cont.)'}
+            </Text>
+            <View
+              style={{
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                marginTop: 15,
+              }}
+            >
+              {chunk.map((img: any, idx: number) => {
+                const src = typeof img.file === 'string' ? img.file : img.preview || img.image;
+                return (
+                  <View key={idx} style={{ width: '48%', marginBottom: 15 }}>
+                    <Image src={src} style={{ width: '100%', height: 180, objectFit: 'contain' }} />
+                    <Text style={{ fontSize: 9, textAlign: 'center', marginTop: 4 }}>
+                      {img.caption || `Image ${pageIdx * 4 + idx + 1}`}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </Page>
+        ));
+      })()}
     </Document>
   );
 };

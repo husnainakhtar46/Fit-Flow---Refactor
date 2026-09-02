@@ -50,16 +50,7 @@ def generate_pdf_buffer(inspection):
     draw_pair(50, y_pos - 20, "Color", inspection.color)
     draw_pair(50, y_pos - 40, "PO #", inspection.po_number)
 
-    # Factory Name Lookup
-    factory_name = 'N/A'
-    if inspection.factory:
-        try:
-            from qc.models import Factory
-            factory_obj = Factory.objects.filter(id=inspection.factory).first()
-            if factory_obj:
-                factory_name = factory_obj.name
-        except Exception:
-            factory_name = str(inspection.factory)
+    factory_name = inspection.factory.name if inspection.factory else 'N/A'
 
     # Right Column
     draw_pair(300, y_pos, "Date", inspection.created_at.strftime('%Y-%m-%d'))
@@ -139,7 +130,7 @@ def generate_pdf_buffer(inspection):
             val = float(val_str) if val_str is not None and val_str != '' else None
             is_error = False
             if val is not None and m.std is not None and m.tol is not None:
-                if abs(val - m.std) > m.tol:
+                if abs(val - m.std) > (m.tol + 1e-5):
                     is_error = True
 
             if is_error:

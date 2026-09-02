@@ -123,6 +123,21 @@ class StyleMasterViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         return Response({'message': 'No comments found for this style'}, status=status.HTTP_404_NOT_FOUND)
 
+    @action(detail=True, methods=['get'])
+    def inspections(self, request, pk=None):
+        """Retrieve all Sample Evaluations and Final Inspections linked to this StyleMaster."""
+        style = self.get_object()
+        from qc.serializers import InspectionListSerializer, FinalInspectionListSerializer
+        evaluations = style.evaluations.filter(is_deleted=False).order_by('-created_at')
+        final_inspections = style.final_inspections.filter(is_deleted=False).order_by('-created_at')
+        return Response({
+            'style_id': str(style.id),
+            'style_name': style.style_name,
+            'po_number': style.po_number,
+            'evaluations': InspectionListSerializer(evaluations, many=True).data,
+            'final_inspections': FinalInspectionListSerializer(final_inspections, many=True).data,
+        })
+
 
 class SampleCommentViewSet(viewsets.ModelViewSet):
     queryset = SampleComment.objects.all()

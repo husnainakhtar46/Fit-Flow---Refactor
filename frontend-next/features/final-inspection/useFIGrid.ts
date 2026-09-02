@@ -219,7 +219,7 @@ export function useFIGrid({
     const target = parseFloat(std);
     const tolerance = parseFloat(tol);
     if (isNaN(s) || isNaN(target) || isNaN(tolerance)) return false;
-    return Math.abs(s - target) > tolerance;
+    return Math.abs(s - target) > tolerance + 1e-5;
   };
 
   return {

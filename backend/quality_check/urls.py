@@ -30,7 +30,6 @@ router.register(r"factories", FactoryViewSet)
 router.register(r"styles", StyleMasterViewSet)
 router.register(r"sample-comments", SampleCommentViewSet)
 router.register(r"sample-comment-images", SampleCommentImageViewSet)
-router.register(r"sample-images", SampleCommentImageViewSet, basename="sampleimages")
 router.register(r"style-links", StyleLinkViewSet)
 
 urlpatterns = [

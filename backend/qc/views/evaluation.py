@@ -14,7 +14,7 @@ from qc.serializers import (
     InspectionCopySerializer,
 )
 from qc.filters import InspectionFilter
-from qc.services.pdf_generator import generate_pdf_buffer
+from qc.services.pdf.evaluation_pdf import generate_pdf_buffer
 from qc.permissions import CanEditEvaluation, CanAddCustomerFeedback
 from qc.utils import process_and_compress_image
 
@@ -123,6 +123,18 @@ class InspectionViewSet(viewsets.ModelViewSet):
             return Response({"status": "Image uploaded and compressed"}, status=status.HTTP_201_CREATED)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=["post"])
+    def delete_image(self, request, pk=None):
+        inspection = self.get_object()
+        image_id = request.data.get("image_id")
+        if not image_id:
+            return Response({"error": "image_id is required"}, status=status.HTTP_400_BAD_REQUEST)
+        img = inspection.images.filter(id=image_id).first()
+        if img:
+            img.delete()
+            return Response({"status": "Image deleted"})
+        return Response({"error": "Image not found"}, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=True, methods=["post"])
     def send_email(self, request, pk=None):

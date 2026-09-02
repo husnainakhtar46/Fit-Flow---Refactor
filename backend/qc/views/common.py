@@ -84,7 +84,12 @@ class DashboardView(APIView):
         if customer_id:
             eval_qs = eval_qs.filter(customer_id=customer_id)
         if factory_name:
-            eval_qs = eval_qs.filter(factory=factory_name)
+            import uuid
+            try:
+                uuid.UUID(str(factory_name))
+                eval_qs = eval_qs.filter(Q(factory_id=factory_name) | Q(factory__name__iexact=factory_name))
+            except ValueError:
+                eval_qs = eval_qs.filter(factory__name__iexact=factory_name)
 
         total_inspections = eval_qs.count()
         pass_count = eval_qs.filter(decision="Accepted").count()
@@ -109,7 +114,12 @@ class DashboardView(APIView):
         if customer_id:
             fi_qs = fi_qs.filter(customer_id=customer_id)
         if factory_name:
-            fi_qs = fi_qs.filter(factory=factory_name)
+            import uuid
+            try:
+                uuid.UUID(str(factory_name))
+                fi_qs = fi_qs.filter(Q(factory_id=factory_name) | Q(factory__name__iexact=factory_name))
+            except ValueError:
+                fi_qs = fi_qs.filter(factory__name__iexact=factory_name)
 
         fi_total = fi_qs.count()
         fi_pass = fi_qs.filter(result='Pass').count()

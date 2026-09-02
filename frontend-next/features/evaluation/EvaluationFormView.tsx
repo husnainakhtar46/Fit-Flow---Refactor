@@ -32,7 +32,10 @@ interface EvaluationFormViewProps {
   accessories: AccessoryItem[];
   setAccessories: React.Dispatch<React.SetStateAction<AccessoryItem[]>>;
   imageSlots: ImageSlot[];
-  setImageSlots: React.Dispatch<React.SetStateAction<ImageSlot[]>>;
+  setImageSlots?: (slots: ImageSlot[]) => void;
+  addImageSlot?: () => void;
+  removeImageSlot?: (index: number) => void;
+  updateImageSlot?: (index: number, updates: Partial<ImageSlot>) => void;
   factories: any[];
   customers: any[];
   templates: any[];
@@ -59,6 +62,9 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
   setAccessories,
   imageSlots,
   setImageSlots,
+  addImageSlot,
+  removeImageSlot,
+  updateImageSlot,
   factories,
   customers,
   templates,
@@ -99,23 +105,13 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
   };
 
   const getAutosaveBadge = () => {
-    switch (draftsManager.draftStatus) {
-      case 'saving_local':
-      case 'saving_server':
-        return (
-          <span className="flex items-center gap-1 text-xs text-amber-600 font-medium">
-            <Clock className="w-3.5 h-3.5 animate-spin" /> Saving draft...
-          </span>
-        );
-      case 'saved':
-        return (
-          <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
-            <CheckCircle className="w-3.5 h-3.5" /> Draft saved
-          </span>
-        );
-      default:
-        return null;
+    if (draftsManager.draftStatus === 'saving_local' || draftsManager.draftStatus === 'saving_server') {
+      return <span className="flex items-center gap-1 text-xs text-amber-600 font-medium"><Clock className="w-3.5 h-3.5 animate-spin" /> Saving draft...</span>;
     }
+    if (draftsManager.draftStatus === 'saved') {
+      return <span className="flex items-center gap-1 text-xs text-green-600 font-medium"><CheckCircle className="w-3.5 h-3.5" /> Draft saved</span>;
+    }
+    return null;
   };
 
   return (
@@ -308,7 +304,13 @@ export const EvaluationFormView: React.FC<EvaluationFormViewProps> = ({
           <hr />
 
           {/* Image Upload Gallery */}
-          <ImageGallery imageSlots={imageSlots} setImageSlots={setImageSlots} />
+          <ImageGallery
+            imageSlots={imageSlots}
+            setImageSlots={setImageSlots}
+            onAddSlot={addImageSlot}
+            onRemoveSlot={removeImageSlot}
+            onUpdateSlot={updateImageSlot}
+          />
 
           {/* Footer Actions */}
           <div className="sticky bottom-0 bg-white pt-4 pb-2 border-t flex flex-wrap items-center justify-between gap-3">

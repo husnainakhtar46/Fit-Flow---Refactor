@@ -24,9 +24,10 @@ class RequestOTPView(APIView):
         # Look up the user by email using filter().first() to avoid MultipleObjectsReturned
         user = User.objects.filter(email__iexact=email).first()
         if not user:
+            # Generic message to prevent email enumeration
             return Response(
-                {'error': 'No account found with this email address.'},
-                status=status.HTTP_404_NOT_FOUND
+                {'message': 'If an account matches this email, a verification code has been sent.'},
+                status=status.HTTP_200_OK
             )
         
         # Generate OTP and send email via Gmail API with SMTP fallback

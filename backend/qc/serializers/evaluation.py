@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
+from django.db import transaction, models
 from qc.models import (
     Inspection,
     Measurement,
@@ -77,13 +78,16 @@ class InspectionListSerializer(serializers.ModelSerializer):
 
 class InspectionCopySerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
+    factory_name = serializers.CharField(source='factory.name', read_only=True)
+    style_master_name = serializers.CharField(source='style_master.style_name', read_only=True)
     measurements = MeasurementSerializer(many=True, read_only=True)
     images = InspectionImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Inspection
         fields = [
-            "id", "style", "color", "po_number", "factory", "stage", "template", "customer", "customer_name",
+            "id", "style", "style_master", "style_master_name", "color", "po_number",
+            "factory", "factory_name", "stage", "template", "customer", "customer_name",
             # Customer Comments by Category
             "customer_remarks", "customer_fit_comments", "customer_workmanship_comments",
             "customer_wash_comments", "customer_fabric_comments", "customer_accessories_comments",
@@ -182,8 +186,9 @@ class InspectionSerializer(serializers.ModelSerializer):
                     obj = Factory.objects.create(name=fact)
                 mutable_data['factory'] = obj.pk
 
-        # Clean style_master (UUID or resolve from name)
+        # Clean style_master (UUID or resolve from PO/name)
         sm = mutable_data.get('style_master')
+        matched_sm = None
         if sm == '' or sm == 'null':
             mutable_data['style_master'] = None
         elif isinstance(sm, str):
@@ -192,25 +197,50 @@ class InspectionSerializer(serializers.ModelSerializer):
                 uuid.UUID(sm)
             except ValueError:
                 from qc.models import StyleMaster
-                matched_sm = StyleMaster.objects.filter(style_name__iexact=sm).first()
+                matched_sm = StyleMaster.objects.filter(models.Q(style_name__iexact=sm) | models.Q(po_number__iexact=sm)).first()
                 mutable_data['style_master'] = matched_sm.pk if matched_sm else None
-        elif not sm and mutable_data.get('style'):
+
+        # If not linked yet, try matching by po_number or style
+        if not mutable_data.get('style_master'):
             from qc.models import StyleMaster
-            matched_sm = StyleMaster.objects.filter(style_name__iexact=mutable_data.get('style')).first()
+            po = (mutable_data.get('po_number') or '').strip()
+            style_name = (mutable_data.get('style') or '').strip()
+            if po:
+                matched_sm = StyleMaster.objects.filter(po_number__iexact=po).first()
+            if not matched_sm and style_name:
+                matched_sm = StyleMaster.objects.filter(style_name__iexact=style_name).first()
             if matched_sm:
                 mutable_data['style_master'] = matched_sm.pk
+
+        # If style_master is set, auto-fill blank fields from it
+        if mutable_data.get('style_master') and not matched_sm:
+            from qc.models import StyleMaster
+            matched_sm = StyleMaster.objects.filter(pk=mutable_data['style_master']).first()
+
+        if matched_sm:
+            if not mutable_data.get('style'):
+                mutable_data['style'] = matched_sm.style_name
+            if not mutable_data.get('po_number'):
+                mutable_data['po_number'] = matched_sm.po_number
+            if not mutable_data.get('color') and matched_sm.color:
+                mutable_data['color'] = matched_sm.color
+            if not mutable_data.get('customer') and matched_sm.customer_id:
+                mutable_data['customer'] = matched_sm.customer_id
+            if not mutable_data.get('factory') and matched_sm.factory_id:
+                mutable_data['factory'] = matched_sm.factory_id
 
         return super().to_internal_value(mutable_data)
 
     def create(self, validated_data):
         measurements_data = validated_data.pop("measurements", [])
-        inspection = Inspection.objects.create(**validated_data)
-        for m_data in measurements_data:
-            samples_data = m_data.pop("samples", [])
-            measurement = Measurement.objects.create(inspection=inspection, **m_data)
-            for s_data in samples_data:
-                MeasurementSample.objects.create(measurement=measurement, **s_data)
-        return inspection
+        with transaction.atomic():
+            inspection = Inspection.objects.create(**validated_data)
+            for m_data in measurements_data:
+                samples_data = m_data.pop("samples", [])
+                measurement = Measurement.objects.create(inspection=inspection, **m_data)
+                for s_data in samples_data:
+                    MeasurementSample.objects.create(measurement=measurement, **s_data)
+            return inspection
 
     def update(self, instance, validated_data):
         measurements_data = validated_data.pop("measurements", None)
@@ -218,15 +248,16 @@ class InspectionSerializer(serializers.ModelSerializer):
         if 'customer_decision' in validated_data or 'customer_feedback_comments' in validated_data:
             instance.customer_feedback_date = timezone.now()
 
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
 
-        if measurements_data is not None:
-            instance.measurements.all().delete()
-            for m_data in measurements_data:
-                samples_data = m_data.pop("samples", [])
-                measurement = Measurement.objects.create(inspection=instance, **m_data)
-                for s_data in samples_data:
-                    MeasurementSample.objects.create(measurement=measurement, **s_data)
-        return instance
+            if measurements_data is not None:
+                instance.measurements.all().delete()
+                for m_data in measurements_data:
+                    samples_data = m_data.pop("samples", [])
+                    measurement = Measurement.objects.create(inspection=instance, **m_data)
+                    for s_data in samples_data:
+                        MeasurementSample.objects.create(measurement=measurement, **s_data)
+            return instance

@@ -1,6 +1,8 @@
 export type ImageSlot = {
+  id?: string;
   file: File | string | null;
   caption: string;
+  isPredefined?: boolean;
 };
 
 export type MeasurementSample = {
