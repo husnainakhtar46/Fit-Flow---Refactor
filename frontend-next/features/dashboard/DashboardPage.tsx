@@ -95,14 +95,11 @@ export const DashboardPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-4 md:pt-6">
       {/* Header & Tabs */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Executive Dashboard</h1>
-          <p className="text-sm text-gray-500">
-            Real-time quality KPIs, pass rates, defect trends, and factory analytics
-          </p>
         </div>
 
         <div className="flex items-center bg-gray-100 p-1 rounded-lg border">

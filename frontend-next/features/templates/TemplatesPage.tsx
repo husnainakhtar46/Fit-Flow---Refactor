@@ -136,14 +136,11 @@ export const TemplatesPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-4 md:pt-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Style Templates</h1>
-          <p className="text-sm text-gray-500">
-            Define standard Point of Measure (POM) templates and tolerances
-          </p>
         </div>
 
         {!isReadOnly && canEditTemplates && (

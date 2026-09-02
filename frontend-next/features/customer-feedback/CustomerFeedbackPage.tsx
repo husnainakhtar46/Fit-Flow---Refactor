@@ -144,13 +144,10 @@ export const CustomerFeedbackPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-4 md:pt-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Customer Feedback</h1>
-          <p className="text-sm text-gray-500">
-            Log external customer approval decisions and feedback comments
-          </p>
         </div>
       </div>
 
